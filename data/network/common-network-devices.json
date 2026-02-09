@@ -1,0 +1,50 @@
+{
+  "description": "Shared network infrastructure embodied carbon - amortized across all applications",
+  "components": {
+    "datacenter_switches": {
+      "description": "Top-of-rack and spine switches",
+      "gco2e_per_gbps_capacity": 8500,
+      "typical_capacity_gbps": 400,
+      "total_embodied_gco2e": 3400000,
+      "source": "Network equipment LCA studies",
+      "allocation_method": "Per GB transferred"
+    },
+    "routers": {
+      "description": "Core network routers",
+      "gco2e_per_device": 125000,
+      "typical_devices": 4,
+      "total_embodied_gco2e": 500000,
+      "source": "Cisco network equipment embodied carbon"
+    },
+    "load_balancers": {
+      "description": "Application load balancers",
+      "gco2e_per_device": 45000,
+      "typical_devices": 8,
+      "total_embodied_gco2e": 360000,
+      "source": "F5/NGINX hardware embodied"
+    },
+    "wan_optimization": {
+      "description": "WAN accelerators and CDN edge nodes",
+      "gco2e": 280000,
+      "source": "CDN infrastructure embodied estimate"
+    },
+    "fiber_cabling": {
+      "description": "Fiber optic cables and connectors",
+      "gco2e_per_km": 120,
+      "typical_km": 5,
+      "total_embodied_gco2e": 600,
+      "source": "Fiber optic cable manufacturing carbon"
+    }
+  },
+  "total_network_infrastructure_gco2e": 4540600,
+  "allocation": {
+    "method": "Per GB transferred",
+    "coefficient_gco2e_per_gb": 0.15,
+    "notes": "Amortized over typical 4-year lifespan and datacenter throughput"
+  },
+  "operational_energy": {
+    "watts_per_gbps": 3.2,
+    "source": "Network equipment power consumption studies",
+    "notes": "This is applied per GB transferred using CCF coefficient"
+  }
+}

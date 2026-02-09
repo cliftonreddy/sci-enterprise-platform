@@ -1,0 +1,55 @@
+{
+  "name": "GCP n2-standard-4",
+  "provider": "GCP",
+  "instance_type": "n2-standard-4",
+  "description": "Balanced compute and memory workloads",
+  "specifications": {
+    "vcpus": 4,
+    "vcpus_total": 80,
+    "memory_gb": 16,
+    "memory_total_gb": 320,
+    "cpu_model": "Intel Xeon Cascade Lake",
+    "cpu_tdp_watts": 165,
+    "storage_type": "Persistent Disk SSD",
+    "network_bandwidth_gbps": 10
+  },
+  "embodied_carbon": {
+    "cpu": {
+      "gco2e": 88000,
+      "source": "Boavizta API - Intel Cascade Lake",
+      "notes": "Allocated share: 4/80 vCPUs"
+    },
+    "memory": {
+      "gco2e_per_gb": 12.5,
+      "total_gco2e": 200,
+      "source": "CCF - DDR4"
+    },
+    "storage": {
+      "gco2e": 6500,
+      "source": "GCP Persistent Disk embodied"
+    },
+    "motherboard_chipset": {
+      "gco2e": 70000,
+      "source": "CCF baseline"
+    },
+    "network_card": {
+      "gco2e": 16000,
+      "source": "10 Gbps NIC"
+    },
+    "total_server_embodied_gco2e": 1100000,
+    "allocated_share_gco2e": 55000,
+    "allocation_method": "vCPU ratio (4/80)"
+  },
+  "lifespan": {
+    "years": 4,
+    "hours": 35040,
+    "seconds": 126144000
+  },
+  "pue": {
+    "value": 1.10,
+    "source": "GCP industry-leading PUE",
+    "notes": "Most efficient hyperscaler"
+  },
+  "regions_available": ["us-central1", "us-west1", "europe-west1", "asia-southeast1"],
+  "cost_per_hour_usd": 0.194552
+}

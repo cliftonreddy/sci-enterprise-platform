@@ -1,0 +1,41 @@
+{
+  "app_name": "ExpertSearch",
+  "description": "Intelligent search engine with ML-based ranking and personalization",
+  "server_config": {
+    "server_type": "aws-c5-4xlarge",
+    "count": 12,
+    "region": "us-west-2",
+    "notes": "Compute-optimized for search indexing and query processing"
+  },
+  "average_usage": {
+    "cpu_utilization_percent": 78,
+    "memory_utilization_percent": 62,
+    "storage_io_ops_per_sec": 2800,
+    "network_ingress_gbps": 1.2,
+    "network_egress_gbps": 2.4,
+    "notes": "CPU-intensive due to real-time ranking algorithms"
+  },
+  "workload_pattern": {
+    "type": "compute-heavy",
+    "peak_hours": "08:00-20:00 PST",
+    "weekend_multiplier": 0.7,
+    "seasonal_peaks": ["Back to School", "Tax Season"]
+  },
+  "functional_unit": {
+    "type": "search-query",
+    "description": "completed search request with results",
+    "average_per_day": 8500000,
+    "average_per_hour": 354167
+  },
+  "business_metrics": {
+    "daily_active_users": 3200000,
+    "average_queries_per_user": 2.66,
+    "click_through_rate_percent": 12.5
+  },
+  "optimization_constraints": {
+    "max_latency_ms": 150,
+    "min_availability_percent": 99.99,
+    "compliance": ["GDPR", "CCPA"],
+    "data_residency": ["US", "EU", "APAC"]
+  }
+}

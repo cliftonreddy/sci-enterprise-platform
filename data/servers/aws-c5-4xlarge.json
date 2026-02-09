@@ -1,0 +1,54 @@
+{
+  "name": "AWS c5.4xlarge",
+  "provider": "AWS",
+  "instance_type": "c5.4xlarge",
+  "description": "Compute optimized for CPU-intensive workloads",
+  "specifications": {
+    "vcpus": 16,
+    "vcpus_total": 96,
+    "memory_gb": 32,
+    "memory_total_gb": 192,
+    "cpu_model": "Intel Xeon Platinum 8124M",
+    "cpu_tdp_watts": 240,
+    "storage_type": "EBS-optimized",
+    "network_bandwidth_gbps": 10
+  },
+  "embodied_carbon": {
+    "cpu": {
+      "gco2e": 95000,
+      "source": "Boavizta API - Intel Xeon Platinum 8124M",
+      "notes": "Higher performance CPU, allocated share: 16/96 vCPUs"
+    },
+    "memory": {
+      "gco2e_per_gb": 12.5,
+      "total_gco2e": 400,
+      "source": "Cloud Carbon Footprint - DDR4 ECC"
+    },
+    "storage": {
+      "gco2e": 5000,
+      "source": "EBS SSD embodied emissions"
+    },
+    "motherboard_chipset": {
+      "gco2e": 78000,
+      "source": "CCF baseline + compute-optimized components"
+    },
+    "network_card": {
+      "gco2e": 18000,
+      "source": "Enhanced networking (10 Gbps)"
+    },
+    "total_server_embodied_gco2e": 1350000,
+    "allocated_share_gco2e": 225000,
+    "allocation_method": "vCPU ratio (16/96) weighted for compute optimization"
+  },
+  "lifespan": {
+    "years": 4,
+    "hours": 35040,
+    "seconds": 126144000
+  },
+  "pue": {
+    "value": 1.15,
+    "source": "AWS published PUE"
+  },
+  "regions_available": ["us-east-1", "us-west-2", "eu-west-1", "ap-southeast-1"],
+  "cost_per_hour_usd": 0.68
+}

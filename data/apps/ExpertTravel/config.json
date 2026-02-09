@@ -1,0 +1,43 @@
+{
+  "app_name": "ExpertTravel",
+  "description": "Travel booking platform with flight search, hotel reservations, and itinerary planning",
+  "server_config": {
+    "server_type": "on-prem-dell-r740",
+    "count": 3,
+    "region": "on-premises-datacenter",
+    "notes": "On-premises for data sovereignty and legacy system integration"
+  },
+  "average_usage": {
+    "cpu_utilization_percent": 48,
+    "memory_utilization_percent": 64,
+    "storage_io_ops_per_sec": 2200,
+    "network_ingress_gbps": 0.6,
+    "network_egress_gbps": 1.2,
+    "notes": "Batch processing for fare updates runs overnight"
+  },
+  "workload_pattern": {
+    "type": "mixed-batch",
+    "peak_hours": "09:00-17:00 EST",
+    "weekend_multiplier": 0.6,
+    "seasonal_peaks": ["Summer Travel", "Thanksgiving", "Winter Holidays"],
+    "batch_windows": ["00:00-04:00 daily fare updates", "Sunday 02:00 analytics"]
+  },
+  "functional_unit": {
+    "type": "booking",
+    "description": "completed travel booking (flight, hotel, or package)",
+    "average_per_day": 28000,
+    "average_per_hour": 1167
+  },
+  "business_metrics": {
+    "daily_active_users": 420000,
+    "average_booking_value_usd": 850,
+    "conversion_rate_percent": 6.7
+  },
+  "optimization_constraints": {
+    "max_latency_ms": 1000,
+    "min_availability_percent": 99.5,
+    "compliance": ["PCI-DSS", "GDPR", "PNR data handling"],
+    "data_residency": ["US - must remain on-prem"],
+    "gds_integration_required": true
+  }
+}

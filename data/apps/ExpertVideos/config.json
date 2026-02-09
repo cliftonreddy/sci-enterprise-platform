@@ -1,0 +1,42 @@
+{
+  "app_name": "ExpertVideos",
+  "description": "Video streaming platform with live and on-demand content",
+  "server_config": {
+    "server_type": "azure-d4s-v3",
+    "count": 24,
+    "region": "eastus",
+    "notes": "Premium SSD for fast video chunk delivery, moderate compute needs"
+  },
+  "average_usage": {
+    "cpu_utilization_percent": 42,
+    "memory_utilization_percent": 72,
+    "storage_io_ops_per_sec": 4500,
+    "network_ingress_gbps": 0.5,
+    "network_egress_gbps": 18.5,
+    "notes": "Extremely high egress bandwidth for video streaming"
+  },
+  "workload_pattern": {
+    "type": "bandwidth-heavy",
+    "peak_hours": "18:00-23:00 EST",
+    "weekend_multiplier": 2.2,
+    "seasonal_peaks": ["Super Bowl", "Holidays", "Summer vacation"]
+  },
+  "functional_unit": {
+    "type": "streaming-hour",
+    "description": "one hour of video delivered to viewer",
+    "average_per_day": 4200000,
+    "average_per_hour": 175000
+  },
+  "business_metrics": {
+    "daily_active_users": 1850000,
+    "average_watch_time_hours": 2.27,
+    "average_bitrate_mbps": 4.2
+  },
+  "optimization_constraints": {
+    "max_latency_ms": 2000,
+    "min_availability_percent": 99.9,
+    "compliance": ["COPPA", "GDPR"],
+    "data_residency": ["US", "EU"],
+    "cdn_required": true
+  }
+}
