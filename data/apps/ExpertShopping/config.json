@@ -1,0 +1,41 @@
+{
+  "app_name": "ExpertShopping",
+  "description": "E-commerce platform with product catalog, cart, checkout, and order processing",
+  "server_config": {
+    "server_type": "aws-m5-2xlarge",
+    "count": 8,
+    "region": "us-east-1",
+    "notes": "General purpose instances for balanced web + database workload"
+  },
+  "average_usage": {
+    "cpu_utilization_percent": 52,
+    "memory_utilization_percent": 68,
+    "storage_io_ops_per_sec": 1200,
+    "network_ingress_gbps": 0.8,
+    "network_egress_gbps": 3.2,
+    "notes": "High egress due to product images and video content"
+  },
+  "workload_pattern": {
+    "type": "transaction-heavy",
+    "peak_hours": "10:00-22:00 EST",
+    "weekend_multiplier": 1.8,
+    "seasonal_peaks": ["Black Friday", "Cyber Monday", "Holiday Season"]
+  },
+  "functional_unit": {
+    "type": "order",
+    "description": "completed customer order",
+    "average_per_day": 125000,
+    "average_per_hour": 5208
+  },
+  "business_metrics": {
+    "daily_active_users": 850000,
+    "average_order_value_usd": 87.50,
+    "conversion_rate_percent": 2.8
+  },
+  "optimization_constraints": {
+    "max_latency_ms": 200,
+    "min_availability_percent": 99.95,
+    "compliance": ["PCI-DSS", "GDPR"],
+    "data_residency": ["US", "EU"]
+  }
+}

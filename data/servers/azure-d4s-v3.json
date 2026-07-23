@@ -1,0 +1,54 @@
+{
+  "name": "Azure Standard_D4s_v3",
+  "provider": "Azure",
+  "instance_type": "Standard_D4s_v3",
+  "description": "General purpose VM with premium SSD storage",
+  "specifications": {
+    "vcpus": 4,
+    "vcpus_total": 64,
+    "memory_gb": 16,
+    "memory_total_gb": 256,
+    "cpu_model": "Intel Xeon E5-2673 v4",
+    "cpu_tdp_watts": 135,
+    "storage_type": "Premium SSD",
+    "network_bandwidth_gbps": 2
+  },
+  "embodied_carbon": {
+    "cpu": {
+      "gco2e": 72000,
+      "source": "Boavizta API - Intel Xeon E5-2673 v4",
+      "notes": "Allocated share: 4/64 vCPUs"
+    },
+    "memory": {
+      "gco2e_per_gb": 12.5,
+      "total_gco2e": 200,
+      "source": "CCF - DDR4 ECC"
+    },
+    "storage": {
+      "gco2e": 8000,
+      "source": "Premium SSD embodied emissions"
+    },
+    "motherboard_chipset": {
+      "gco2e": 65000,
+      "source": "CCF baseline server"
+    },
+    "network_card": {
+      "gco2e": 12000,
+      "source": "Standard NIC"
+    },
+    "total_server_embodied_gco2e": 950000,
+    "allocated_share_gco2e": 59200,
+    "allocation_method": "vCPU ratio (4/64)"
+  },
+  "lifespan": {
+    "years": 4,
+    "hours": 35040,
+    "seconds": 126144000
+  },
+  "pue": {
+    "value": 1.18,
+    "source": "Microsoft Azure published sustainability data"
+  },
+  "regions_available": ["eastus", "westus2", "westeurope", "southeastasia"],
+  "cost_per_hour_usd": 0.192
+}

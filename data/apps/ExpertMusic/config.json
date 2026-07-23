@@ -1,0 +1,42 @@
+{
+  "app_name": "ExpertMusic",
+  "description": "Music streaming service with personalized playlists and radio",
+  "server_config": {
+    "server_type": "gcp-n2-standard-4",
+    "count": 6,
+    "region": "us-central1",
+    "notes": "Balanced instances for audio streaming and recommendation engine"
+  },
+  "average_usage": {
+    "cpu_utilization_percent": 38,
+    "memory_utilization_percent": 58,
+    "storage_io_ops_per_sec": 1800,
+    "network_ingress_gbps": 0.2,
+    "network_egress_gbps": 2.8,
+    "notes": "Lower bandwidth than video, consistent usage throughout day"
+  },
+  "workload_pattern": {
+    "type": "steady-state",
+    "peak_hours": "07:00-19:00 CST",
+    "weekend_multiplier": 1.3,
+    "seasonal_peaks": ["Summer", "Holiday Season", "New Year"]
+  },
+  "functional_unit": {
+    "type": "listening-hour",
+    "description": "one hour of music streamed to listener",
+    "average_per_day": 6800000,
+    "average_per_hour": 283333
+  },
+  "business_metrics": {
+    "daily_active_users": 2400000,
+    "average_listen_time_hours": 2.83,
+    "premium_subscriber_percent": 42
+  },
+  "optimization_constraints": {
+    "max_latency_ms": 500,
+    "min_availability_percent": 99.5,
+    "compliance": ["GDPR", "DMCA"],
+    "data_residency": ["US", "EU", "LATAM"],
+    "cdn_required": true
+  }
+}

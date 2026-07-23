@@ -1,0 +1,59 @@
+{
+  "name": "AWS m5.2xlarge",
+  "provider": "AWS",
+  "instance_type": "m5.2xlarge",
+  "description": "General purpose compute optimized instance",
+  "specifications": {
+    "vcpus": 8,
+    "vcpus_total": 96,
+    "memory_gb": 32,
+    "memory_total_gb": 384,
+    "cpu_model": "Intel Xeon Platinum 8175M",
+    "cpu_tdp_watts": 205,
+    "storage_type": "EBS-optimized",
+    "network_bandwidth_gbps": 10
+  },
+  "embodied_carbon": {
+    "cpu": {
+      "gco2e": 85000,
+      "source": "Boavizta API - Intel Xeon Platinum 8175M",
+      "notes": "2-socket configuration, allocated share: 8/96 vCPUs"
+    },
+    "memory": {
+      "gco2e_per_gb": 12.5,
+      "total_gco2e": 400,
+      "source": "Cloud Carbon Footprint - DDR4 ECC",
+      "notes": "32 GB allocated from 384 GB total server RAM"
+    },
+    "storage": {
+      "gco2e": 5000,
+      "source": "EBS SSD embodied emissions estimate",
+      "notes": "Amortized across typical EBS volume lifecycle"
+    },
+    "motherboard_chipset": {
+      "gco2e": 75000,
+      "source": "CCF baseline server components",
+      "notes": "Dual-socket server motherboard, power supply, chassis"
+    },
+    "network_card": {
+      "gco2e": 15000,
+      "source": "CCF network interface card estimate"
+    },
+    "total_server_embodied_gco2e": 1200000,
+    "allocated_share_gco2e": 100400,
+    "allocation_method": "vCPU ratio (8/96) + memory ratio (32/384)"
+  },
+  "lifespan": {
+    "years": 4,
+    "hours": 35040,
+    "seconds": 126144000,
+    "source": "Industry standard for cloud infrastructure"
+  },
+  "pue": {
+    "value": 1.15,
+    "source": "AWS published PUE for modern data centers",
+    "notes": "Highly efficient hyperscale facility"
+  },
+  "regions_available": ["us-east-1", "us-west-2", "eu-west-1", "eu-central-1", "ap-southeast-1"],
+  "cost_per_hour_usd": 0.384
+}

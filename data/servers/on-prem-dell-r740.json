@@ -1,0 +1,65 @@
+{
+  "name": "Dell PowerEdge R740",
+  "provider": "On-Premises",
+  "instance_type": "Physical Server",
+  "description": "Dual-socket rack server for on-premises deployment",
+  "specifications": {
+    "vcpus": 32,
+    "vcpus_total": 32,
+    "memory_gb": 128,
+    "memory_total_gb": 128,
+    "cpu_model": "2x Intel Xeon Gold 6130",
+    "cpu_tdp_watts": 250,
+    "storage_type": "NVMe SSD Array",
+    "network_bandwidth_gbps": 25
+  },
+  "embodied_carbon": {
+    "cpu": {
+      "gco2e": 180000,
+      "source": "Boavizta API - 2x Intel Xeon Gold 6130",
+      "notes": "Dedicated hardware - full allocation"
+    },
+    "memory": {
+      "gco2e_per_gb": 12.5,
+      "total_gco2e": 1600,
+      "source": "CCF - 128 GB DDR4 ECC"
+    },
+    "storage": {
+      "gco2e": 45000,
+      "source": "4x 1.6 TB NVMe drives embodied carbon"
+    },
+    "motherboard_chipset": {
+      "gco2e": 95000,
+      "source": "Dell PowerEdge server board, RAID controller, chassis"
+    },
+    "network_card": {
+      "gco2e": 22000,
+      "source": "Dual 25 GbE NIC"
+    },
+    "power_supply": {
+      "gco2e": 18000,
+      "source": "Redundant 1100W PSU embodied"
+    },
+    "cooling_fans": {
+      "gco2e": 3500,
+      "source": "Server cooling hardware"
+    },
+    "total_server_embodied_gco2e": 365100,
+    "allocated_share_gco2e": 365100,
+    "allocation_method": "Full dedicated server"
+  },
+  "lifespan": {
+    "years": 5,
+    "hours": 43800,
+    "seconds": 157680000,
+    "notes": "Longer than cloud - physical ownership"
+  },
+  "pue": {
+    "value": 1.58,
+    "source": "Uptime Institute 2021 average for enterprise data centers",
+    "notes": "Typical on-prem DC efficiency"
+  },
+  "regions_available": ["on-premises-datacenter"],
+  "cost_per_hour_usd": null,
+  "notes": "CapEx model - upfront $8,500 purchase + power/cooling costs"
+}

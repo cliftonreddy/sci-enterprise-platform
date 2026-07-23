@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+  backend:
+    build: ./backend
+    container_name: sci-enterprise-backend
+    environment:
+      - WATTTIME_USER=${WATTTIME_USER:-}
+      - WATTTIME_PASS=${WATTTIME_PASS:-}
+    volumes:
+      - ./data:/app/data:ro
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: sci-enterprise-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

@@ -1,0 +1,111 @@
+{
+  "regions": [
+    {
+      "name": "us-east-1",
+      "provider": "AWS",
+      "location": "N. Virginia, USA",
+      "watttime_region": "PJM_ROANOKE",
+      "fallback_intensity_gco2_kwh": 420,
+      "renewable_percent": 35,
+      "typical_best_hours": "02:00-06:00 local",
+      "notes": "Coal and gas heavy, improving with renewables"
+    },
+    {
+      "name": "us-west-2",
+      "provider": "AWS",
+      "location": "Oregon, USA",
+      "watttime_region": "BPAT",
+      "fallback_intensity_gco2_kwh": 280,
+      "renewable_percent": 72,
+      "typical_best_hours": "11:00-16:00 local (solar peak)",
+      "notes": "Hydro-dominant grid, excellent carbon profile"
+    },
+    {
+      "name": "us-central1",
+      "provider": "GCP",
+      "location": "Iowa, USA",
+      "watttime_region": "MISO_WEST",
+      "fallback_intensity_gco2_kwh": 520,
+      "renewable_percent": 28,
+      "typical_best_hours": "12:00-17:00 local (wind peak)",
+      "notes": "High wind capacity but coal baseload"
+    },
+    {
+      "name": "eastus",
+      "provider": "Azure",
+      "location": "Virginia, USA",
+      "watttime_region": "PJM_DC",
+      "fallback_intensity_gco2_kwh": 410,
+      "renewable_percent": 38,
+      "typical_best_hours": "02:00-06:00 local",
+      "notes": "Similar to AWS us-east-1"
+    },
+    {
+      "name": "westeurope",
+      "provider": "Azure",
+      "location": "Netherlands",
+      "watttime_region": null,
+      "fallback_intensity_gco2_kwh": 310,
+      "renewable_percent": 58,
+      "typical_best_hours": "12:00-15:00 local (solar+wind)",
+      "notes": "WattTime limited - use fallback"
+    },
+    {
+      "name": "eu-west-1",
+      "provider": "AWS",
+      "location": "Ireland",
+      "watttime_region": null,
+      "fallback_intensity_gco2_kwh": 290,
+      "renewable_percent": 65,
+      "typical_best_hours": "10:00-16:00 local (wind dominant)",
+      "notes": "Wind-heavy grid, WattTime limited"
+    },
+    {
+      "name": "eu-central-1",
+      "provider": "AWS",
+      "location": "Frankfurt, Germany",
+      "watttime_region": null,
+      "fallback_intensity_gco2_kwh": 390,
+      "renewable_percent": 48,
+      "typical_best_hours": "11:00-15:00 local (solar peak)",
+      "notes": "Transitioning from coal, strong solar"
+    },
+    {
+      "name": "ap-southeast-1",
+      "provider": "AWS",
+      "location": "Singapore",
+      "watttime_region": null,
+      "fallback_intensity_gco2_kwh": 580,
+      "renewable_percent": 12,
+      "typical_best_hours": "12:00-14:00 local (limited solar)",
+      "notes": "Gas-heavy, limited renewables"
+    },
+    {
+      "name": "asia-southeast1",
+      "provider": "GCP",
+      "location": "Singapore",
+      "watttime_region": null,
+      "fallback_intensity_gco2_kwh": 575,
+      "renewable_percent": 13,
+      "typical_best_hours": "12:00-14:00 local",
+      "notes": "Similar to AWS Singapore"
+    },
+    {
+      "name": "CAISO_NORTH",
+      "provider": "WattTime",
+      "location": "Northern California, USA",
+      "watttime_region": "CAISO_NORTH",
+      "fallback_intensity_gco2_kwh": 220,
+      "renewable_percent": 68,
+      "typical_best_hours": "11:00-17:00 local (solar dominant)",
+      "notes": "Free tier WattTime region - solar+hydro mix"
+    }
+  ],
+  "optimization_rules": {
+    "prefer_renewable_heavy": true,
+    "min_renewable_percent": 50,
+    "max_intensity_gco2_kwh": 350,
+    "consider_latency": true,
+    "max_additional_latency_ms": 50
+  }
+}
