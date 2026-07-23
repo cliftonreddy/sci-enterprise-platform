@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM craks0d0kubesvc1.azurecr.io/external/python:3.12-slim
 WORKDIR /app
 
 # Install dependencies
