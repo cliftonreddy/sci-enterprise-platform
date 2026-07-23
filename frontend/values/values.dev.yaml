@@ -6,7 +6,7 @@ replicaCount: 1
 
 image:
   repositoryHost: craks0d0kubesvc1.azurecr.io
-  repository: americannational/dashboard
+  repository: americannational/dashboard-carbon
 
 #subDomain
 subDomain: sci-dashboard
