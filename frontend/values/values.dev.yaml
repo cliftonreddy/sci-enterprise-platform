@@ -9,7 +9,7 @@ image:
   repository: americannational/dashboard
 
 #subDomain
-subDomain: carbonawareweb-dashboard
+subDomain: sci-dashboard
 
 #domain
 domain: dev.americannational.com
