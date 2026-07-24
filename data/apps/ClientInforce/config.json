@@ -1,5 +1,5 @@
 {
-  "app_name": "ExpertTravel",
+  "app_name": "ClientInforce",
   "description": "Travel booking platform with flight search, hotel reservations, and itinerary planning",
   "server_config": {
     "server_type": "on-prem-dell-r740",
