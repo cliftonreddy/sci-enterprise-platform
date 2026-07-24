@@ -1,5 +1,5 @@
 {
-  "app_name": "ExpertLead",
+  "app_name": "ExpertLeads",
   "description": "Intelligent search engine with ML-based ranking and personalization",
   "server_config": {
     "server_type": "aws-c5-4xlarge",
