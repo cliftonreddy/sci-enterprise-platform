@@ -1,5 +1,5 @@
 {
-  "app_name": "ExpertShopping",
+  "app_name": "ExpertApp",
   "description": "E-commerce platform with product catalog, cart, checkout, and order processing",
   "server_config": {
     "server_type": "aws-m5-2xlarge",
