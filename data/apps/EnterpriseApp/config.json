@@ -1,5 +1,5 @@
 {
-  "app_name": "ExpertVideos",
+  "app_name": "EnterpriseApp",
   "description": "Video streaming platform with live and on-demand content",
   "server_config": {
     "server_type": "azure-d4s-v3",
