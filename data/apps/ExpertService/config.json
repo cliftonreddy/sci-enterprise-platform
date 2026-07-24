@@ -1,5 +1,5 @@
 {
-  "app_name": "Expertservice",
+  "app_name": "ExpertService",
   "description": "Music streaming service with personalized playlists and radio",
   "server_config": {
     "server_type": "gcp-n2-standard-4",
