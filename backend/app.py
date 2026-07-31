@@ -253,6 +253,25 @@ def _lerp(x: float, xs: list[float], ys: list[float]) -> float:
     return ys[-1]
 
 
+def _exec_prometheus_query(promql: str) -> dict | None:
+    """Run a PromQL query via kubectl exec + curl inside the ucp-metrics pod. Returns parsed JSON or None."""
+    try:
+        result = subprocess.run(
+            [KUBECTL_PATH, "--kubeconfig", KUBECTL_KUBECONFIG,
+             "exec", "-n", PROMETHEUS_NS, PROMETHEUS_POD,
+             "-c", PROMETHEUS_CONTAINER, "--",
+             "curl", "-s", "--cert", PROMETHEUS_CERT,
+             "--key", PROMETHEUS_KEY, "--cacert", PROMETHEUS_CA,
+             f"{PROMETHEUS_URL}/api/v1/query", "--data-urlencode", f"query={promql}"],
+            capture_output=True, text=True, timeout=15
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            return None
+        data = json.loads(result.stdout)
+        return data if data.get("status") == "success" and data.get("data", {}).get("result") else None
+    except Exception:
+        return None
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  PROVIDER DELEGATION WRAPPERS
 #  These thin functions keep existing call-sites in routes / diagnostics
