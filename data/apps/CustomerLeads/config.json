@@ -1,0 +1,42 @@
+{
+  "app_name": "CustomerLeads",
+  "description": "CustomerLeads - internal agent leads management tool (business hours only)",
+  "server_config": {
+    "server_type": "vsphere-worker-node",
+    "count": 2,
+    "region": "on-premises-datacenter",
+    "notes": "Runs on on-prem worker VMs. Replica count overridden live from Kubernetes API."
+  },
+  "average_usage": {
+    "cpu_utilization_percent": 78,
+    "memory_utilization_percent": 62,
+    "storage_io_ops_per_sec": 2800,
+    "network_ingress_gbps": 1.2,
+    "network_egress_gbps": 2.4,
+    "notes": "CPU-intensive due to real-time ranking algorithms"
+  },
+  "workload_pattern": {
+    "type": "compute-heavy",
+    "peak_hours": "08:00-20:00 PST",
+    "weekend_multiplier": 0.7,
+    "seasonal_peaks": ["Back to School", "Tax Season"]
+  },
+  "functional_unit": {
+    "type": "api-request",
+    "description": "one HTTP API request to CustomerLeads service",
+    "average_per_day": 25000,
+    "average_per_hour": 1042,
+    "source": "Estimated: ~500 active agents x 50 API calls/day. Prometheus confirmed near-zero off-hours traffic (cpu=0.2%, egress=0.0 at 02:06 UTC). Re-measure during business hours (08:00-18:00 CST) with: rate(ucp_engine_container_network_rx_bytes_total{podName=~'customerleads.*'}[1h])*3600"
+  },
+  "business_metrics": {
+    "usage_pattern": "business-hours-only internal tool",
+    "peak_hours_cst": "08:00-18:00",
+    "source": "Prometheus live metrics - confirmed near-zero traffic outside business hours"
+  },
+  "optimization_constraints": {
+    "max_latency_ms": 150,
+    "min_availability_percent": 99.99,
+    "compliance": ["GDPR", "CCPA"],
+    "data_residency": ["US", "EU", "APAC"]
+  }
+}

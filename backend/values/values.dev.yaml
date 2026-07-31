@@ -1,0 +1,25 @@
+# Default values for carbon-aware-sdk.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repositoryHost: your-registry.azurecr.io
+  repository: your-org/sci-carbon-backend
+
+#subDomain
+subDomain: sci-enterprise-backend
+
+#domain
+domain: your-domain.com
+
+port: 5000
+
+path: /
+
+readinessProbePath: /api/health
+
+nodeSelector: worker
+
+appEnv: "dev"

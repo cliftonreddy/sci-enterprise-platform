@@ -1,6 +1,6 @@
 # Enterprise Multi-Application SCI Platform
 
-A comprehensive carbon intensity comparison platform for enterprise applications. Compare SCI scores across 5 applications (ExpertShopping, ExpertSearch, ExpertVideos, ExpertMusic, ExpertTravel), get optimization recommendations for hardware and region selection, and visualize carbon impact across your infrastructure.
+A comprehensive carbon intensity comparison platform for enterprise applications. Compare SCI scores across 6 applications (AzureDevOps, CustomerApp, CustomerLeads, CustomerService, CustomerSign, CustomerTask), get optimization recommendations for hardware and region selection, and visualize carbon impact across your infrastructure.
 
 ---
 
@@ -36,11 +36,12 @@ Three types of recommendations:
 
 | Application | Server Config | Region | Workload Pattern | Functional Unit |
 |-------------|---------------|--------|------------------|-----------------|
-| **ExpertShopping** | 8× AWS m5.2xlarge | us-east-1 | Transaction-heavy e-commerce | orders |
-| **ExpertSearch** | 12× AWS c5.4xlarge | us-west-2 | Compute-intensive search | queries |
-| **ExpertVideos** | 24× Azure D4s v3 | eastus | Bandwidth-heavy streaming | streaming-hours |
-| **ExpertMusic** | 6× GCP n2-standard-4 | us-central1 | Steady-state audio streaming | listening-hours |
-| **ExpertTravel** | 3× Dell R740 (on-prem) | datacenter | Mixed batch processing | bookings |
+| **AzureDevOps**    | 11× vSphere build node  | on-premises-datacenter | Burst (business hours CI/CD) | pipeline_run |
+| **CustomerApp**    | 1× vSphere worker node  | on-premises-datacenter | Steady-state (business hours) | page_view |
+| **CustomerLeads**  | 1× vSphere worker node  | on-premises-datacenter | Steady-state (business hours) | api_request |
+| **CustomerService**| 1× vSphere worker node  | on-premises-datacenter | Steady-state (business hours) | page_view |
+| **CustomerSign**   | 1× vSphere worker node  | on-premises-datacenter | Steady-state (business hours) | page_view |
+| **CustomerTask**   | 1× vSphere worker node  | on-premises-datacenter | Steady-state (business hours) | api_request |
 
 ---
 
@@ -118,7 +119,7 @@ All values from **Boavizta API** and **Cloud Carbon Footprint** methodology:
 
 ### 1. Clone and Configure
 ```bash
-cd sci-enterprise
+cd sci-carbon-dashboard
 cp .env.example .env
 # Optional: Add WattTime credentials for live data
 ```
@@ -134,10 +135,73 @@ docker compose up --build
 | API | http://localhost:5000 |
 
 ### 3. Explore
-- View all 5 applications ranked by SCI
+- View all 6 applications ranked by SCI
 - Click any app to see detailed breakdown
 - Review optimization recommendations
 - Compare regional carbon intensities
+
+---
+
+## Credential Files
+
+The dashboard runs fully with static fallback data — **no credentials are required to start it**. Each integration below degrades gracefully when its credential file or keys are absent:
+
+| Missing credential | Fallback behaviour |
+|---|---|
+| `ELECTRICITY_MAPS_TOKEN` / `WATTTIME_*` | Grid intensity uses static IEA 2022 values from `grid-regions.json` |
+| `ga4-service-account.json` / `GA4_PROPERTY_ID` | Functional units use static hourly estimates from each app's `config.json` |
+| `ADO_PAT` / `ADO_ORGS` | Build counts use static estimates; live ADO endpoints return a "not configured" message |
+| `ucp-bundle` / `KUBECONFIG_DIR` | Prometheus metrics disabled; replica counts and CPU utilisation use static `config.json` values |
+
+The only hard requirement is that **`.env` must exist** (even if all values are blank) because Docker Compose reads it at startup. Running `cp .env.example .env` is sufficient.
+
+The sections below explain each file only if you want to enable the corresponding live data source. None of these files should ever be committed — they are all covered by `.gitignore`.
+
+### 1. `.env` — API keys and connection settings
+**Location:** `sci-carbon-dashboard/.env`
+**Template:** copy from `sci-carbon-dashboard/.env.example`
+
+Required to connect to any external service:
+
+| What you're enabling | Keys to populate |
+|---|---|
+| **Electricity Maps** live grid carbon intensity | `ELECTRICITY_MAPS_TOKEN` |
+| **WattTime v3** live MOER data | `WATTTIME_USER`, `WATTTIME_PASS` |
+| **Google Analytics 4** live functional unit counts | `GA4_PROPERTY_ID`, `GOOGLE_APPLICATION_CREDENTIALS` |
+| **Azure DevOps** live pipeline run counts | `ADO_ORG`, `ADO_ORGS`, `ADO_PAT`, `ADO_PROJECTS` |
+| **Mirantis MKE / Prometheus** live replica & CPU metrics | `KUBECONFIG_DIR` |
+
+Without this file the backend will not start. Copy the example first:
+```bash
+cp .env.example .env
+```
+
+---
+
+### 2. `ga4-service-account.json` — Google service account key
+**Location:** `sci-carbon-dashboard/ga4-service-account.json`
+*(path must match `GOOGLE_APPLICATION_CREDENTIALS` in `.env`)*
+
+Required to pull live session/user counts from **Google Analytics 4** as the functional unit for GA-tracked applications (e.g. CustomerApp). Without this file GA4 functional units fall back to static hourly estimates.
+
+To obtain:
+1. Open [Google Cloud Console](https://console.cloud.google.com/) → IAM & Admin → Service Accounts
+2. Create or select a service account and add a JSON key
+3. In GA4 Admin → Property Access Management, grant the service account **Viewer** role
+4. Download the key file and save it at the path above
+
+---
+
+### 3. `ucp-bundle-<username>/` — Mirantis MKE client bundle
+**Location:** one level above `sci-carbon-dashboard/` — e.g. `ucp-bundle-<username>/` at the workspace root
+Set `KUBECONFIG_DIR=../ucp-bundle-<username>` in `.env` (already the default).
+
+Required to fetch **live Prometheus CPU/replica metrics** from the Mirantis MKE cluster. Without this directory the backend falls back to the static utilization values in each app's `config.json`.
+
+To obtain:
+1. Log in to your MKE UI → top-right user menu → **Client Bundle** → **New Client Bundle**
+2. Download and extract the zip; the extracted folder is your bundle directory
+3. Update `KUBECONFIG_DIR` in `.env` to point to the extracted folder
 
 ---
 
@@ -160,17 +224,17 @@ docker compose up --build
   "applications": [
     {
       "app": {
-        "app_name": "ExpertShopping",
+        "app_name": "CustomerApp",
         "sci": 0.02504197,
         "functional_unit": "order",
         "carbon_gco2e": 3130.246,
         "carbon_operational_gco2e": 2105.844,
         "carbon_embodied_gco2e": 1024.402,
         "total_energy_kwh": 0.050139,
-        "server_type": "aws-m5-2xlarge",
-        "server_count": 8,
-        "region": "us-east-1",
-        "cost_usd": 3.07
+        "server_type": "vsphere-worker-node",
+        "server_count": 1,
+        "region": "on-premises-datacenter",
+        "cost_usd": 0
       },
       "recommendations": [
         {
@@ -247,7 +311,10 @@ GET /v3/forecast?region=CAISO_NORTH&signal_type=co2_moer
 ## File Structure
 
 ```
-sci-enterprise/
+sci-carbon-dashboard/
+├── .env                        # secrets — copy from .env.example, never commit
+├── .env.example                # committed template with all keys blank
+├── ga4-service-account.json    # Google SA key — never commit (gitignored)
 ├── backend/
 │   ├── app.py              # Flask API with optimization engine
 │   ├── requirements.txt
@@ -265,7 +332,7 @@ sci-enterprise/
 │   ├── servers/            # 5 server spec files (JSON)
 │   ├── network/            # Network infrastructure (JSON)
 │   ├── apps/               # 5 app folders with config + metrics
-│   │   ├── ExpertShopping/
+│   │   ├── CustomerApp/
 │   │   │   ├── config.json
 │   │   │   └── metrics-hourly.csv
 │   │   └── ...
@@ -275,6 +342,8 @@ sci-enterprise/
 ├── .env.example
 └── README.md
 ```
+
+> **Note:** `ucp-bundle-<username>/` lives one level above this directory (workspace root). Set `KUBECONFIG_DIR` in `.env` to its path.
 
 ---
 
@@ -301,24 +370,23 @@ sci-enterprise/
 
 ## Example Optimization Scenario
 
-**ExpertSearch** (current state):
-- 12× AWS c5.4xlarge in us-west-2
-- Average CPU: 78%
-- Carbon: 5,200 gCO₂eq/hour
-- Cost: $8.16/hour
+**CustomerService** (current state):
+- 1× vSphere worker node on-premises
+- Average CPU: 52%
+- Carbon: ~85 gCO₂eq/hour
+- Cost: CapEx model
 
 **Recommendation**: No change needed - well-optimized
-- High CPU utilization → right-sized
-- Already in low-carbon region (Oregon, 280 gCO₂/kWh)
+- CPU utilization within normal range
+- Already on-premises (no cloud migration needed)
 
-**ExpertShopping** (current state):
-- 8× AWS m5.2xlarge in us-east-1 (420 gCO₂/kWh)
-- Carbon: 3,130 gCO₂eq/hour
+**CustomerApp** (current state):
+- 1× vSphere worker node on-premises
+- Carbon: ~72 gCO₂eq/hour
 
-**Recommendation**: Move to us-west-2 (Oregon)
-- New carbon: 2,087 gCO₂eq/hour
-- **Reduction: 33.3%** (1,043 gCO₂eq saved)
-- Renewable: 72% vs 35%
+**Recommendation**: Scale down replicas during off-hours
+- Weekend multiplier: 0.15 → opportunity to reduce replicas
+- **Potential reduction: ~20%** during nights/weekends
 
 ---
 

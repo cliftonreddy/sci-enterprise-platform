@@ -1,0 +1,32 @@
+# Environment / secrets — never commit these
+.env
+*.env
+.env.*
+!.env.example
+
+# Google service account credentials — never commit
+*-service-account.json
+*-service-account-*.json
+ga4-credentials.json
+ga4-*.json
+
+# UCP client bundles — contain personal certs and kubeconfig
+ucp-bundle-*/
+*.pem
+*.key
+kube.yml
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.pytest_cache/
+venv/
+.venv/
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+
+# Docker
+*.log

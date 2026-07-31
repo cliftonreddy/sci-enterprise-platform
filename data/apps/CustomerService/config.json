@@ -1,0 +1,44 @@
+{
+  "app_name": "CustomerService",
+  "description": "CustomerService - enterprise customer service portal",
+  "server_config": {
+    "server_type": "vsphere-worker-node",
+    "count": 2,
+    "region": "on-premises-datacenter",
+    "notes": "Runs on on-prem worker VMs. Replica count overridden live from Kubernetes API."
+  },
+  "average_usage": {
+    "cpu_utilization_percent": 38,
+    "memory_utilization_percent": 58,
+    "storage_io_ops_per_sec": 1800,
+    "network_ingress_gbps": 0.2,
+    "network_egress_gbps": 2.8,
+    "notes": "Lower bandwidth than video, consistent usage throughout day"
+  },
+  "workload_pattern": {
+    "type": "steady-state",
+    "peak_hours": "07:00-19:00 CST",
+    "weekend_multiplier": 1.3,
+    "seasonal_peaks": ["Summer", "Holiday Season", "New Year"]
+  },
+  "ga_page_title": "CustomerService",
+  "functional_unit": {
+    "type": "page-view",
+    "description": "one page view of CustomerService",
+    "average_per_day": 20143,
+    "average_per_hour": 839,
+    "source": "Google Analytics - 564K views over 28 days (Jun 26 - Jul 23, 2026)"
+  },
+  "business_metrics": {
+    "views_last_28_days": 564000,
+    "average_views_per_day": 20143,
+    "source": "Google Analytics"
+  },
+  "optimization_constraints": {
+    "max_latency_ms": 500,
+    "min_availability_percent": 99.5,
+    "compliance": ["GDPR", "DMCA"],
+    "data_residency": ["US", "EU", "LATAM"],
+    "cdn_required": true
+  }
+}

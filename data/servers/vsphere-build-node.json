@@ -1,0 +1,53 @@
+{
+  "name": "vSphere Build Node",
+  "provider": "On-Premises",
+  "instance_type": "vsphere-build-node",
+  "description": "VMware Hyper-V VM - 4 vCPU build/CI agent. Runs on Intel Xeon Gold 6254 host in on-premises datacenter. Hosts Azure DevOps on-premises build agents.",
+  "specifications": {
+    "vcpus": 4,
+    "vcpus_total": 18,
+    "memory_gb": 16,
+    "memory_total_gb": 16,
+    "cpu_model": "Intel Xeon Gold 6254 @ 3.10GHz (Cascade Lake, 18-core, 200W TDP)",
+    "cpu_tdp_watts": 200,
+    "storage_type": "VMware Virtual Disk (local or SAN datastore)",
+    "network_bandwidth_gbps": 10,
+    "notes": "VM has 4 vCPUs out of 18 physical cores. Effective VM TDP share = 200W × (4/18) ≈ 44.4W. Memory is estimated at 16GB (typical CI agent allocation) — confirm via vCenter if needed."
+  },
+  "embodied_carbon": {
+    "vm_share_notes": "Embodied carbon allocated proportionally: physical CPU × (4 vCPU / 18 physical cores).",
+    "cpu": {
+      "gco2e": 17778,
+      "source": "Boavizta estimate for Intel Xeon Gold 6254 (Cascade Lake 14nm, ~80,000 gCO2e total) × 4/18 vCPU share",
+      "notes": "Intel Xeon Gold 6254 — 18-core, manufactured at Intel 14nm fabs (Cascade Lake)"
+    },
+    "memory": {
+      "gco2e_per_gb": 12.5,
+      "total_gco2e": 200,
+      "source": "CCF — 16 GB DDR4 VM allocation"
+    },
+    "storage": {
+      "gco2e": 3000,
+      "source": "Proportional virtual disk share estimate"
+    },
+    "infrastructure_share": {
+      "gco2e": 6000,
+      "source": "Proportional share of motherboard, chassis, PSU, NIC, cooling (4/18 of host)"
+    },
+    "total_server_embodied_gco2e": 26978,
+    "allocated_share_gco2e": 26978,
+    "allocation_method": "Proportional vCPU share of physical host (4/18 cores)"
+  },
+  "lifespan": {
+    "years": 5,
+    "hours": 43800,
+    "seconds": 157680000,
+    "notes": "Aligned with physical host refresh cycle"
+  },
+  "pue": {
+    "value": 1.58,
+    "source": "Uptime Institute 2021 average for enterprise data centers",
+    "notes": "Replace with actual on-premises datacenter PUE if known"
+  },
+  "cost_per_hour_usd": null
+}

@@ -1,0 +1,41 @@
+{
+  "app_name": "CustomerApp",
+  "description": "CustomerApp - policy initiation portal used daily by agents to create new insurance policies",
+  "server_config": {
+    "server_type": "vsphere-worker-node",
+    "count": 1,
+    "region": "on-premises-datacenter",
+    "notes": "Runs on on-prem worker VMs. Replica count overridden live from Kubernetes API."
+  },
+  "average_usage": {
+    "cpu_utilization_percent": 52,
+    "memory_utilization_percent": 68,
+    "storage_io_ops_per_sec": 1200,
+    "network_ingress_gbps": 0.8,
+    "network_egress_gbps": 3.2,
+    "notes": "Usage pattern unknown - update when GA data is available"
+  },
+  "workload_pattern": {
+    "type": "steady-state",
+    "peak_hours": "08:00-17:00 CST",
+    "weekend_multiplier": 0.15,
+    "seasonal_peaks": ["Open Enrollment", "Q1 Policy Season", "Q4 Year-End"]
+  },
+  "functional_unit": {
+    "type": "page-view",
+    "description": "one page view of CustomerApp policy initiation portal",
+    "average_per_day": 15000,
+    "average_per_hour": 625,
+    "source": "Estimated for daily-use agent application - replace with Google Analytics data"
+  },
+  "business_metrics": {
+    "usage_pattern": "daily agent use for policy initiation",
+    "source": "No GA data available - update when tracking is confirmed"
+  },
+  "optimization_constraints": {
+    "max_latency_ms": 2000,
+    "min_availability_percent": 99.5,
+    "compliance": ["SOC2", "state insurance regulations"],
+    "data_residency": ["US - must remain on-prem"]
+  }
+}
