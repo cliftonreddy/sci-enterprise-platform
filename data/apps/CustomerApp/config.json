@@ -1,11 +1,11 @@
 {
-  "app_name": "ExpertApp",
-  "description": "ExpertApp - policy initiation portal used daily by agents to create new insurance policies",
+  "app_name": "CustomerApp",
+  "description": "CustomerApp - policy initiation portal used daily by agents to create new insurance policies",
   "server_config": {
     "server_type": "vsphere-worker-node",
     "count": 1,
     "region": "on-premises-datacenter",
-    "notes": "Runs on svpx-docknode* VMs in League City TX. Replica count overridden live from Kubernetes API."
+    "notes": "Runs on on-prem worker VMs. Replica count overridden live from Kubernetes API."
   },
   "average_usage": {
     "cpu_utilization_percent": 52,
@@ -23,7 +23,7 @@
   },
   "functional_unit": {
     "type": "page-view",
-    "description": "one page view of ExpertApp policy initiation portal",
+    "description": "one page view of CustomerApp policy initiation portal",
     "average_per_day": 15000,
     "average_per_hour": 625,
     "source": "Estimated for daily-use agent application - replace with Google Analytics data"

@@ -1,11 +1,11 @@
 {
-  "app_name": "ExpertService",
-  "description": "ExpertService - American National service portal",
+  "app_name": "CustomerService",
+  "description": "CustomerService - enterprise customer service portal",
   "server_config": {
     "server_type": "vsphere-worker-node",
     "count": 2,
     "region": "on-premises-datacenter",
-    "notes": "Runs on svpx-docknode* VMs in League City TX. Replica count overridden live from Kubernetes API."
+    "notes": "Runs on on-prem worker VMs. Replica count overridden live from Kubernetes API."
   },
   "average_usage": {
     "cpu_utilization_percent": 38,
@@ -21,10 +21,10 @@
     "weekend_multiplier": 1.3,
     "seasonal_peaks": ["Summer", "Holiday Season", "New Year"]
   },
-  "ga_page_title": "ExpertService",
+  "ga_page_title": "CustomerService",
   "functional_unit": {
     "type": "page-view",
-    "description": "one page view of ExpertService",
+    "description": "one page view of CustomerService",
     "average_per_day": 20143,
     "average_per_hour": 839,
     "source": "Google Analytics - 564K views over 28 days (Jun 26 - Jul 23, 2026)"

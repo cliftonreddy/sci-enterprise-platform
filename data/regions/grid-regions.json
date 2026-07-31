@@ -102,7 +102,7 @@
     {
       "name": "on-premises-datacenter",
       "provider": "On-Premises",
-      "location": "League City, TX (77573)",
+      "location": "On-Premises Datacenter",
       "watttime_region": "ERCOT_HOUSTON",
       "electricity_maps_zone": "US-TEX-ERCO",
       "fallback_intensity_gco2_kwh": 184,

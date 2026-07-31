@@ -86,7 +86,7 @@ def build_providers(
     pod_prefix:       str | None = None,
     pod_patterns:     dict[str, str] | None = None,
     app_deployments:  dict[str, str] | None = None,
-    app_namespace:    str = "agent-captive",
+    app_namespace:    str = "your-namespace",
     # Grid
     grid_provider:    str | None = None,
     em_token:         str | None = None,

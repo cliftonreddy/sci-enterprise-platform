@@ -1,11 +1,11 @@
 {
-  "app_name": "ExpertTask",
-  "description": "ExpertTask - internal agent task management tool (beta)",
+  "app_name": "CustomerTask",
+  "description": "CustomerTask - internal agent task management tool (beta)",
   "server_config": {
     "server_type": "vsphere-worker-node",
     "count": 1,
     "region": "on-premises-datacenter",
-    "notes": "Runs on svpx-docknode* VMs in League City TX. Replica count overridden live from Kubernetes API."
+    "notes": "Runs on on-prem worker VMs. Replica count overridden live from Kubernetes API."
   },
   "average_usage": {
     "cpu_utilization_percent": 42,
@@ -23,10 +23,10 @@
   },
   "functional_unit": {
     "type": "api-request",
-    "description": "one HTTP API request to ExpertTask service",
+    "description": "one HTTP API request to CustomerTask service",
     "average_per_day": 14100,
     "average_per_hour": 588,
-    "source": "Projected: ~30% below ExpertService (20,143/day). Update when GA tracking is live."
+    "source": "Projected: ~30% below CustomerService (20,143/day). Update when GA tracking is live."
   },
   "business_metrics": {
     "ga_views_last_28_days": 31,

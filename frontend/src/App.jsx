@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -123,52 +123,52 @@ function Metric({ label, value, unit, color=T.text }) {
 const ADO_MOCK = {
   ok: true,
   agents: [
-    { org:'AmericanNational', id:1,  name:'svpx-tfsbuild01', status:'online',  current_job: null },
-    { org:'AmericanNational', id:2,  name:'svpx-tfsbuild02', status:'online',  current_job:'Build-ExpertApp' },
-    { org:'AmericanNational', id:3,  name:'svpx-tfsbuild03', status:'online',  current_job: null },
-    { org:'AmericanNational', id:4,  name:'svpx-tfsbuild04', status:'online',  current_job: null },
-    { org:'AmericanNational', id:5,  name:'svpx-tfsbuild05', status:'online',  current_job:'Build-ESign' },
-    { org:'AmericanNational', id:6,  name:'svpx-tfsbuild06', status:'online',  current_job: null },
-    { org:'AmericanNational', id:7,  name:'svpx-tfsbuild07', status:'online',  current_job: null },
-    { org:'AmericanNational', id:8,  name:'svpx-tfsbuild08', status:'offline', current_job: null },
-    { org:'AmericanNational', id:9,  name:'svpx-tfsbuild09', status:'online',  current_job: null },
-    { org:'AmericanNational', id:10, name:'svpx-tfsbuild10', status:'online',  current_job: null },
-    { org:'AmericanNational', id:11, name:'svpx-tfsbuild11', status:'online',  current_job: null },
+    { org:'ACME Inc', id:1,  name:'prod-server-tfsbuild01', status:'online',  current_job: null },
+    { org:'ACME Inc', id:2,  name:'prod-server-tfsbuild02', status:'online',  current_job:'Build-CustomerApp' },
+    { org:'ACME Inc', id:3,  name:'prod-server-tfsbuild03', status:'online',  current_job: null },
+    { org:'ACME Inc', id:4,  name:'prod-server-tfsbuild04', status:'online',  current_job: null },
+    { org:'ACME Inc', id:5,  name:'prod-server-tfsbuild05', status:'online',  current_job:'Build-CustomerSign' },
+    { org:'ACME Inc', id:6,  name:'prod-server-tfsbuild06', status:'online',  current_job: null },
+    { org:'ACME Inc', id:7,  name:'prod-server-tfsbuild07', status:'online',  current_job: null },
+    { org:'ACME Inc', id:8,  name:'prod-server-tfsbuild08', status:'offline', current_job: null },
+    { org:'ACME Inc', id:9,  name:'prod-server-tfsbuild09', status:'online',  current_job: null },
+    { org:'ACME Inc', id:10, name:'prod-server-tfsbuild10', status:'online',  current_job: null },
+    { org:'ACME Inc', id:11, name:'prod-server-tfsbuild11', status:'online',  current_job: null },
   ],
   agent_utilization: [
-    { org:'AmericanNational', id:1,  name:'svpx-tfsbuild01', pool:'Default', jobs_28d:612, avg_duration_s:872, utilization_pct:62 },
-    { org:'AmericanNational', id:2,  name:'svpx-tfsbuild02', pool:'Default', jobs_28d:584, avg_duration_s:934, utilization_pct:59 },
-    { org:'AmericanNational', id:3,  name:'svpx-tfsbuild03', pool:'Default', jobs_28d:540, avg_duration_s:780, utilization_pct:55 },
-    { org:'AmericanNational', id:4,  name:'svpx-tfsbuild04', pool:'Default', jobs_28d:498, avg_duration_s:910, utilization_pct:52 },
-    { org:'AmericanNational', id:5,  name:'svpx-tfsbuild05', pool:'Default', jobs_28d:620, avg_duration_s:855, utilization_pct:63 },
-    { org:'AmericanNational', id:6,  name:'svpx-tfsbuild06', pool:'Default', jobs_28d:456, avg_duration_s:740, utilization_pct:48 },
-    { org:'AmericanNational', id:7,  name:'svpx-tfsbuild07', pool:'Default', jobs_28d:430, avg_duration_s:820, utilization_pct:45 },
-    { org:'AmericanNational', id:9,  name:'svpx-tfsbuild09', pool:'Default', jobs_28d:380, avg_duration_s:690, utilization_pct:38 },
-    { org:'AmericanNational', id:10, name:'svpx-tfsbuild10', pool:'Default', jobs_28d:410, avg_duration_s:760, utilization_pct:41 },
-    { org:'AmericanNational', id:11, name:'svpx-tfsbuild11', pool:'Default', jobs_28d:390, avg_duration_s:800, utilization_pct:40 },
+    { org:'ACME Inc', id:1,  name:'prod-server-tfsbuild01', pool:'Default', jobs_28d:612, avg_duration_s:872, utilization_pct:62 },
+    { org:'ACME Inc', id:2,  name:'prod-server-tfsbuild02', pool:'Default', jobs_28d:584, avg_duration_s:934, utilization_pct:59 },
+    { org:'ACME Inc', id:3,  name:'prod-server-tfsbuild03', pool:'Default', jobs_28d:540, avg_duration_s:780, utilization_pct:55 },
+    { org:'ACME Inc', id:4,  name:'prod-server-tfsbuild04', pool:'Default', jobs_28d:498, avg_duration_s:910, utilization_pct:52 },
+    { org:'ACME Inc', id:5,  name:'prod-server-tfsbuild05', pool:'Default', jobs_28d:620, avg_duration_s:855, utilization_pct:63 },
+    { org:'ACME Inc', id:6,  name:'prod-server-tfsbuild06', pool:'Default', jobs_28d:456, avg_duration_s:740, utilization_pct:48 },
+    { org:'ACME Inc', id:7,  name:'prod-server-tfsbuild07', pool:'Default', jobs_28d:430, avg_duration_s:820, utilization_pct:45 },
+    { org:'ACME Inc', id:9,  name:'prod-server-tfsbuild09', pool:'Default', jobs_28d:380, avg_duration_s:690, utilization_pct:38 },
+    { org:'ACME Inc', id:10, name:'prod-server-tfsbuild10', pool:'Default', jobs_28d:410, avg_duration_s:760, utilization_pct:41 },
+    { org:'ACME Inc', id:11, name:'prod-server-tfsbuild11', pool:'Default', jobs_28d:390, avg_duration_s:800, utilization_pct:40 },
   ],
   summary_28d: {
     total_builds: 4920,
     builds_per_day: 176,
     by_project: {
-      'AmericanNational/ExpertApp': {
+      'ACME Inc/CustomerApp': {
         builds: 1420,
         // UTC hours 0-23; peak 14-22 (08:00-16:00 CST), nightly batch spike at 08 UTC
         hour_distribution: [2,1,1,1,1,2,2,4,22,8,6,5,5,6,52,68,72,80,76,64,48,32,18,8],
       },
-      'AmericanNational/ESign': {
+      'ACME Inc/CustomerSign': {
         builds: 1040,
         hour_distribution: [2,1,1,1,1,2,2,4,18,6,5,4,4,5,38,50,54,60,55,48,36,24,14,6],
       },
-      'AmericanNational/ExpertLeads': {
+      'ACME Inc/CustomerLeads': {
         builds: 740,
         hour_distribution: [1,0,0,0,1,1,1,3,14,4,3,3,3,4,28,36,38,42,40,34,26,18,10,4],
       },
-      'AmericanNational/ExpertService': {
+      'ACME Inc/CustomerService': {
         builds: 860,
         hour_distribution: [1,1,0,0,1,1,1,3,16,5,4,3,3,5,32,42,44,48,46,38,30,20,12,4],
       },
-      'AmericanNational/ExpertTask': {
+      'ACME Inc/CustomerTask': {
         builds: 860,
         hour_distribution: [1,1,0,0,1,1,1,3,16,5,4,3,3,5,30,40,42,46,44,36,28,18,10,4],
       },
@@ -194,6 +194,8 @@ export default function App() {
   const [adoLoading, setAdoLoading] = useState(false);
   const [error, setError] = useState(null);
   const [liveMode, setLiveMode] = useState(false);
+  // incremented to invalidate in-flight ADO fetches when mode changes or a different app is selected
+  const adoFetchId = useRef(0);
 
   useEffect(() => {
     fetchData(liveMode);
@@ -202,6 +204,7 @@ export default function App() {
       setAdoDetails(null);
       setAdoError(null);
       if (!liveMode) {
+        adoFetchId.current++; // discard any in-flight live fetch
         setAdoDetails(ADO_MOCK);
         setAdoLoading(false);
       } else {
@@ -243,6 +246,7 @@ export default function App() {
 
   // Live ADO fetch — retries while backend pre-warm is still running
   const doAdoFetch = () => {
+    const myId = ++adoFetchId.current;
     const fetchOnce = () => {
       fetch('/api/ado/details')
         .then(async r => {
@@ -254,6 +258,7 @@ export default function App() {
                      `Run: docker-compose up --build` }; }
         })
         .then(data => {
+          if (adoFetchId.current !== myId) return; // stale — mode changed or app deselected
           if (data && data.reason === 'loading') {
             // pre-warm still running — retry after suggested delay
             const delay = (data.retry_after || 8) * 1000;
@@ -266,7 +271,11 @@ export default function App() {
             setAdoLoading(false);
           }
         })
-        .catch(err => { setAdoError('Could not reach backend: ' + err.message); setAdoLoading(false); });
+        .catch(err => {
+          if (adoFetchId.current !== myId) return;
+          setAdoError('Could not reach backend: ' + err.message);
+          setAdoLoading(false);
+        });
     };
     fetchOnce();
   };
@@ -278,7 +287,7 @@ export default function App() {
       setAdoDetails(null);
       setAdoError(null);
       if (!liveMode) {
-        // Live mode is off — show static mock data immediately, no API call
+        adoFetchId.current++; // discard any in-flight live fetch
         setAdoDetails(ADO_MOCK);
         setAdoLoading(false);
       } else {
@@ -286,6 +295,7 @@ export default function App() {
         doAdoFetch();
       }
     } else {
+      adoFetchId.current++; // discard any in-flight ADO fetch when navigating away
       setAdoDetails(null);
     }
   };

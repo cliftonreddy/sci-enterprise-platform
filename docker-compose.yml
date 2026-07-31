@@ -12,7 +12,7 @@ services:
       - GRID_PROVIDER=${GRID_PROVIDER:-electricitymaps}
       - KUBECONFIG=/app/kubeconfig/kube.yml
       - KUBECTL_PATH=/usr/local/bin/kubectl
-      - PROMETHEUS_POD=${PROMETHEUS_POD:-ucp-metrics-7n2kc}
+      - PROMETHEUS_POD=${PROMETHEUS_POD:-ucp-metrics}
       - GA4_PROPERTY_ID=${GA4_PROPERTY_ID:-}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/ga4-credentials.json
       - ADO_ORG=${ADO_ORG:-}
@@ -21,7 +21,7 @@ services:
       - ADO_PROJECTS=${ADO_PROJECTS:-}
     volumes:
       - ./data:/app/data:ro
-      - ${KUBECONFIG_DIR:-./ucp-bundle-cliftonreddy}:/app/kubeconfig:ro
+      - ${KUBECONFIG_DIR:-./ucp-bundle}:/app/kubeconfig:ro
       - ${GA4_CREDENTIALS_FILE:-./ga4-service-account.json}:/app/ga4-credentials.json:ro
     ports:
       - "5000:5000"

@@ -1,9 +1,9 @@
 @echo off
-cd /d "C:\AmericanNational\DevSecOps\Green Software Applications\sci-carbon-dashboard"
+cd /d "%~dp0"
 
-set KUBECONFIG=C:\AmericanNational\DevSecOps\Green Software Applications\ucp-bundle-cliftonreddy\kube.yml
+set KUBECONFIG=%~dp0..\ucp-bundle\kube.yml
 set KUBECTL_PATH=C:\Program Files\Docker\Docker\resources\bin\kubectl.exe
-set PROMETHEUS_POD=ucp-metrics-7n2kc
+set PROMETHEUS_POD=ucp-metrics
 
 echo KUBECONFIG=%KUBECONFIG%
 echo Starting SCI backend...

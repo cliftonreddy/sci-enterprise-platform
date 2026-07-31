@@ -1,11 +1,11 @@
 {
-  "app_name": "ESign",
-  "description": "ESign - electronic signature dashboard for policy and document signing",
+  "app_name": "CustomerSign",
+  "description": "CustomerSign - electronic signature dashboard for policy and document signing",
   "server_config": {
     "server_type": "vsphere-worker-node",
     "count": 1,
     "region": "on-premises-datacenter",
-    "notes": "Runs on svpx-docknode* VMs in League City TX. Replica count overridden live from Kubernetes API."
+    "notes": "Runs on on-prem worker VMs. Replica count overridden live from Kubernetes API."
   },
   "average_usage": {
     "cpu_utilization_percent": 48,
@@ -21,10 +21,10 @@
     "weekend_multiplier": 0.1,
     "seasonal_peaks": ["Open Enrollment", "Q1 Policy Renewals"]
   },
-  "ga_page_title": "ESign",
+  "ga_page_title": "CustomerSign",
   "functional_unit": {
     "type": "page-view",
-    "description": "one page view of ESign dashboard",
+    "description": "one page view of CustomerSign dashboard",
     "average_per_day": 50,
     "average_per_hour": 2,
     "source": "Google Analytics - 1,388 views over 28 days (Jun 26 - Jul 23, 2026)"

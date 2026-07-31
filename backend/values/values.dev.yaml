@@ -5,14 +5,14 @@
 replicaCount: 1
 
 image:
-  repositoryHost: craks0d0kubesvc1.azurecr.io
-  repository: americannational/sci-enterprise-backend
+  repositoryHost: your-registry.azurecr.io
+  repository: your-org/sci-carbon-backend
 
 #subDomain
 subDomain: sci-enterprise-backend
 
 #domain
-domain: dev.americannational.com
+domain: your-domain.com
 
 port: 5000
 

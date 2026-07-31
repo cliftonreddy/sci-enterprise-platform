@@ -2,17 +2,17 @@
   "name": "vSphere Worker Node",
   "provider": "On-Premises",
   "instance_type": "vsphere-worker-node",
-  "description": "Hyper-V VM - 6 vCPU / 31 GB RAM worker node (svpx-docknode*). Runs on Intel Xeon Gold 6244 host in League City, TX datacenter.",
+  "description": "Hyper-V VM - 6 vCPU / 31 GB RAM worker node. Runs on Intel Xeon Gold 6244 host in on-premises datacenter.",
   "specifications": {
     "vcpus": 6,
     "vcpus_total": 8,
     "memory_gb": 31,
     "memory_total_gb": 32,
-    "cpu_model": "Intel Xeon Gold 6244 @ 3.60GHz (Cascade Lake, 8-core, 150W TDP) — confirmed via lscpu on svpx-docknode01",
+    "cpu_model": "Intel Xeon Gold 6244 @ 3.60GHz (Cascade Lake, 8-core, 150W TDP)",
     "cpu_tdp_watts": 150,
     "storage_type": "Hyper-V Virtual Disk (Virtual Disk model, local or SAN)",
     "network_bandwidth_gbps": 10,
-    "notes": "VM has 6 vCPUs out of 8 physical cores. Effective VM TDP share = 150W × (6/8) = 112.5W. Hypervisor reports as Microsoft (Hyper-V), dmidecode confirms Microsoft Corporation / Virtual Machine. svpx-tfsbuild12 and svpx-dockmgr01 use Intel Xeon Gold 6254 (18-core, 200W) — different host hardware."
+    "notes": "VM has 6 vCPUs out of 8 physical cores. Effective VM TDP share = 150W × (6/8) = 112.5W. Build and manager nodes use Intel Xeon Gold 6254 (18-core, 200W) — different host hardware."
   },
   "embodied_carbon": {
     "vm_share_notes": "Embodied carbon allocated proportionally: physical CPU × (6 vCPU / 8 physical cores).",
@@ -47,7 +47,7 @@
   "pue": {
     "value": 1.58,
     "source": "Uptime Institute 2021 average for enterprise data centers",
-    "notes": "Replace with actual League City datacenter PUE if known"
+    "notes": "Replace with actual on-premises datacenter PUE if known"
   },
   "cost_per_hour_usd": null
 }

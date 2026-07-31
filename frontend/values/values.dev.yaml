@@ -5,14 +5,14 @@
 replicaCount: 1
 
 image:
-  repositoryHost: craks0d0kubesvc1.azurecr.io
-  repository: americannational/dashboard-carbon
+  repositoryHost: your-registry.azurecr.io
+  repository: your-org/sci-carbon-frontend
 
 #subDomain
 subDomain: sci-dashboard
 
 #domain
-domain: dev.americannational.com
+domain: your-domain.com
 
 port: 8080
 

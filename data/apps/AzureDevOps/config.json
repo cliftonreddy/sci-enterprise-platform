@@ -1,11 +1,11 @@
 {
   "app_name": "AzureDevOps",
-  "description": "Azure DevOps CI/CD pipelines — on-premises build and release agents for all American National applications",
+  "description": "Azure DevOps CI/CD pipelines — on-premises build and release agents for all enterprise applications",
   "server_config": {
     "server_type": "vsphere-build-node",
     "count": 11,
     "region": "on-premises-datacenter",
-    "notes": "Build agents run on svpx-tfsbuild* VMs (Intel Xeon Gold 6254, 4 vCPU each). Count = 11 concurrent agent VMs from ADO Agent Pool. Confirm exact count via ADO → Project Settings → Agent Pools → Agents tab."
+    "notes": "Build agents run on on-prem build VMs (Intel Xeon Gold 6254, 4 vCPU each). Count = 11 concurrent agent VMs from ADO Agent Pool. Confirm exact count via ADO → Project Settings → Agent Pools → Agents tab."
   },
   "average_usage": {
     "cpu_utilization_percent": 60,

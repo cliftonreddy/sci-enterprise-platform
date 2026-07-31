@@ -70,7 +70,7 @@ GA4_PROPERTY_ID = os.getenv("GA4_PROPERTY_ID", "")
 
 # ── Azure DevOps CI/CD ────────────────────────────────────────────────────────
 # ADO_ORGS:       comma-separated collection/org names
-#                 e.g. "PrakCodeCloudCollection,PrakCodecollection,ANCollection,DevOpsTestBed"
+#                 e.g. "OrgOne,OrgTwo"
 # ADO_ORG:        legacy single-org fallback (used when ADO_ORGS is not set)
 # ADO_PAT:        Personal Access Token — full access or scopes:
 #                 Build (Read), Release (Read), Project and Team (Read), Agent Pools (Read)
@@ -102,23 +102,25 @@ print(f"[prometheus] KUBECONFIG={'SET → ' + KUBECTL_KUBECONFIG if KUBECTL_KUBE
 print(f"[prometheus] PROMETHEUS_POD={PROMETHEUS_POD}", flush=True)
 print(f"[grid] GRID_PROVIDER={GRID_PROVIDER}", flush=True)
 
-# Maps dashboard app names → Kubernetes pod name prefix in agent-captive namespace
+# Maps dashboard app names → Kubernetes pod name prefix in your namespace.
+# Set each value to the pod name prefix as shown by: kubectl get pods -n <namespace>
 APP_POD_PATTERNS: dict[str, str] = {
-    "ESign":           "enterprise-esign-rs-pom",
-    "ExpertApp":      "vtr-clientsite-prod",
-    "ExpertLeads":    "expertleads-master",
-    "ExpertService":  "expertservicephase2-api-prod",
-    "ExpertTask":     "expert-task-prod",
+    "CustomerSign":    "customersign-prod",
+    "CustomerApp":     "customerapp-prod",
+    "CustomerLeads":   "customerleads-prod",
+    "CustomerService": "customerservice-prod",
+    "CustomerTask":    "customertask-prod",
 }
-# Maps app names → Kubernetes deployment name (for live replica count)
+# Maps app names → Kubernetes deployment name (for live replica count).
+# Set each value to the deployment name as shown by: kubectl get deployments -n <namespace>
 APP_DEPLOYMENTS: dict[str, str] = {
-    "ESign":           "enterprise-esign-rs-pom-deployment",
-    "ExpertApp":      "vtr-clientsite-prod-deployment",
-    "ExpertLeads":    "expertleads-master-deployment",
-    "ExpertService":  "expertservicephase2-api-prod-deployment",
-    "ExpertTask":     "expert-task-prod-deployment",
+    "CustomerSign":    "customersign-prod-deployment",
+    "CustomerApp":     "customerapp-prod-deployment",
+    "CustomerLeads":   "customerleads-prod-deployment",
+    "CustomerService": "customerservice-prod-deployment",
+    "CustomerTask":    "customertask-prod-deployment",
 }
-APP_NAMESPACE = "agent-captive"
+APP_NAMESPACE = "your-namespace"
 
 # ── SCI constants (IF spec) ───────────────────────────────────────────────────
 TEADS_X  = [0, 10, 50, 100]
