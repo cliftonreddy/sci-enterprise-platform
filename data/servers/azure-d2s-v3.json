@@ -1,0 +1,55 @@
+{
+  "name": "Azure Standard_D2s_v3",
+  "provider": "Azure",
+  "instance_type": "azure-d2s-v3",
+  "description": "General purpose VM - Microsoft-hosted Azure DevOps pipeline agent (Windows 2022 / Ubuntu 22.04)",
+  "specifications": {
+    "vcpus": 2,
+    "vcpus_total": 64,
+    "memory_gb": 8,
+    "memory_total_gb": 256,
+    "cpu_model": "Intel Xeon E5-2673 v4",
+    "cpu_tdp_watts": 68,
+    "storage_type": "Premium SSD (ephemeral per pipeline run)",
+    "network_bandwidth_gbps": 1,
+    "notes": "TDP: 135W host × (2/64 vCPUs share) × Teads factor ≈ 68W allocated. Agents are ephemeral — spun up per pipeline run and deallocated on completion."
+  },
+  "embodied_carbon": {
+    "cpu": {
+      "gco2e": 36000,
+      "source": "Boavizta API - Intel Xeon E5-2673 v4, scaled to 2/64 vCPU share",
+      "notes": "Half of D4s_v3 allocation (2 vs 4 vCPUs)"
+    },
+    "memory": {
+      "gco2e_per_gb": 12.5,
+      "total_gco2e": 100,
+      "source": "CCF - DDR4 ECC, 8 GB allocation"
+    },
+    "storage": {
+      "gco2e": 4000,
+      "source": "Premium SSD ephemeral disk embodied emissions, proportional share"
+    },
+    "motherboard_chipset": {
+      "gco2e": 32500,
+      "source": "CCF baseline server board, proportional 2/4 vCPU share"
+    },
+    "network_card": {
+      "gco2e": 6000,
+      "source": "Standard NIC, proportional share"
+    },
+    "total_server_embodied_gco2e": 950000,
+    "allocated_share_gco2e": 29600,
+    "allocation_method": "vCPU ratio (2/64)"
+  },
+  "lifespan": {
+    "years": 4,
+    "hours": 35040,
+    "seconds": 126144000
+  },
+  "pue": {
+    "value": 1.18,
+    "source": "Microsoft Azure published sustainability data"
+  },
+  "regions_available": ["eastus", "westus2", "westeurope", "southcentralus"],
+  "cost_per_hour_usd": 0.096
+}

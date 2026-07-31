@@ -1,0 +1,53 @@
+{
+  "name": "vSphere Manager Node",
+  "provider": "On-Premises",
+  "instance_type": "vsphere-manager-node",
+  "description": "Hyper-V VM - 2 vCPU MKE/Docker manager node (svpx-dockmgr*). Runs on Intel Xeon Gold 6254 host in League City, TX datacenter. Hosts MKE control plane, not application workloads.",
+  "specifications": {
+    "vcpus": 2,
+    "vcpus_total": 18,
+    "memory_gb": 8,
+    "memory_total_gb": 8,
+    "cpu_model": "Intel Xeon Gold 6254 @ 3.10GHz (Cascade Lake, 18-core, 200W TDP) — confirmed via lscpu on svpx-dockmgr01",
+    "cpu_tdp_watts": 200,
+    "storage_type": "Hyper-V Virtual Disk",
+    "network_bandwidth_gbps": 10,
+    "notes": "VM has 2 vCPUs out of 18 physical cores. Effective VM TDP share = 200W × (2/18) ≈ 22.2W. Hypervisor reports as Microsoft (Hyper-V) on svpx-dockmgr01. Memory estimated at 8GB — confirm via vCenter if needed."
+  },
+  "embodied_carbon": {
+    "vm_share_notes": "Embodied carbon allocated proportionally: physical CPU × (2 vCPU / 18 physical cores).",
+    "cpu": {
+      "gco2e": 8889,
+      "source": "Boavizta estimate for Intel Xeon Gold 6254 (Cascade Lake 14nm, ~80,000 gCO2e total) × 2/18 vCPU share",
+      "notes": "Intel Xeon Gold 6254 — 18-core, Cascade Lake 14nm"
+    },
+    "memory": {
+      "gco2e_per_gb": 12.5,
+      "total_gco2e": 100,
+      "source": "CCF — 8 GB DDR4 VM allocation"
+    },
+    "storage": {
+      "gco2e": 2000,
+      "source": "Proportional virtual disk share estimate"
+    },
+    "infrastructure_share": {
+      "gco2e": 3000,
+      "source": "Proportional share of motherboard, chassis, PSU, NIC, cooling (2/18 of host)"
+    },
+    "total_server_embodied_gco2e": 13989,
+    "allocated_share_gco2e": 13989,
+    "allocation_method": "Proportional vCPU share of physical host (2/18 cores)"
+  },
+  "lifespan": {
+    "years": 5,
+    "hours": 43800,
+    "seconds": 157680000,
+    "notes": "Aligned with physical host refresh cycle"
+  },
+  "pue": {
+    "value": 1.58,
+    "source": "Uptime Institute 2021 average for enterprise data centers",
+    "notes": "Replace with actual League City datacenter PUE if known"
+  },
+  "cost_per_hour_usd": null
+}

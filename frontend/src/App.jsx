@@ -10,6 +10,64 @@ const T = {
   amber: '#ed8936', red: '#f56565', purple: '#9f7aea',
 };
 
+const LOADING_STEPS = [
+  'Fetching carbon intensity data…',
+  'Loading application metrics…',
+  'Calculating SCI scores…',
+  'Analysing energy consumption…',
+  'Retrieving server hardware specs…',
+  'Aggregating functional units…',
+  'Building optimisation recommendations…',
+  'Preparing enterprise dashboard…',
+];
+
+const GLOBES = ['🌍', '🌎', '🌏'];
+
+function LoadingGlobe() {
+  const [frame, setFrame] = useState(0);
+  const [step,  setStep]  = useState(0);
+
+  useEffect(() => {
+    const globe = setInterval(() => setFrame(f => (f + 1) % 3), 220);
+    const text  = setInterval(() => setStep(s  => (s + 1) % LOADING_STEPS.length), 1800);
+    return () => { clearInterval(globe); clearInterval(text); };
+  }, []);
+
+  return (
+    <div style={{
+      display:'flex', alignItems:'center', justifyContent:'center',
+      minHeight:'100vh', background:T.bg,
+    }}>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ fontSize:72, lineHeight:1, marginBottom:24, userSelect:'none' }}>
+          {GLOBES[frame]}
+        </div>
+        <div style={{
+          color:T.text, fontSize:17, fontWeight:600, marginBottom:10,
+          letterSpacing:'0.01em',
+        }}>
+          Enterprise SCI Platform
+        </div>
+        <div style={{
+          color:T.blue, fontSize:13, fontFamily:'JetBrains Mono,monospace',
+          minHeight:20, transition:'opacity .4s',
+        }}>
+          {LOADING_STEPS[step]}
+        </div>
+        <div style={{ marginTop:24, display:'flex', gap:6, justifyContent:'center' }}>
+          {LOADING_STEPS.map((_, i) => (
+            <div key={i} style={{
+              width:6, height:6, borderRadius:'50%',
+              background: i === step ? T.blue : T.border,
+              transition:'background .3s',
+            }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -57,6 +115,71 @@ function Metric({ label, value, unit, color=T.text }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// MOCK DATA — shown when Live Data is OFF
+// Numbers derived from data/apps/AzureDevOps/config.json (190 runs/day, 11 agents)
+// Hour distributions represent build volume per UTC hour summed over 28 days.
+// Business hours 08:00–17:00 CST = 14:00–23:00 UTC; nightly batch at 08:00 UTC (02:00 CST).
+// ══════════════════════════════════════════════════════════════════════════════
+const ADO_MOCK = {
+  ok: true,
+  agents: [
+    { org:'AmericanNational', id:1,  name:'svpx-tfsbuild01', status:'online',  current_job: null },
+    { org:'AmericanNational', id:2,  name:'svpx-tfsbuild02', status:'online',  current_job:'Build-ExpertApp' },
+    { org:'AmericanNational', id:3,  name:'svpx-tfsbuild03', status:'online',  current_job: null },
+    { org:'AmericanNational', id:4,  name:'svpx-tfsbuild04', status:'online',  current_job: null },
+    { org:'AmericanNational', id:5,  name:'svpx-tfsbuild05', status:'online',  current_job:'Build-ESign' },
+    { org:'AmericanNational', id:6,  name:'svpx-tfsbuild06', status:'online',  current_job: null },
+    { org:'AmericanNational', id:7,  name:'svpx-tfsbuild07', status:'online',  current_job: null },
+    { org:'AmericanNational', id:8,  name:'svpx-tfsbuild08', status:'offline', current_job: null },
+    { org:'AmericanNational', id:9,  name:'svpx-tfsbuild09', status:'online',  current_job: null },
+    { org:'AmericanNational', id:10, name:'svpx-tfsbuild10', status:'online',  current_job: null },
+    { org:'AmericanNational', id:11, name:'svpx-tfsbuild11', status:'online',  current_job: null },
+  ],
+  agent_utilization: [
+    { org:'AmericanNational', id:1,  name:'svpx-tfsbuild01', pool:'Default', jobs_28d:612, avg_duration_s:872, utilization_pct:62 },
+    { org:'AmericanNational', id:2,  name:'svpx-tfsbuild02', pool:'Default', jobs_28d:584, avg_duration_s:934, utilization_pct:59 },
+    { org:'AmericanNational', id:3,  name:'svpx-tfsbuild03', pool:'Default', jobs_28d:540, avg_duration_s:780, utilization_pct:55 },
+    { org:'AmericanNational', id:4,  name:'svpx-tfsbuild04', pool:'Default', jobs_28d:498, avg_duration_s:910, utilization_pct:52 },
+    { org:'AmericanNational', id:5,  name:'svpx-tfsbuild05', pool:'Default', jobs_28d:620, avg_duration_s:855, utilization_pct:63 },
+    { org:'AmericanNational', id:6,  name:'svpx-tfsbuild06', pool:'Default', jobs_28d:456, avg_duration_s:740, utilization_pct:48 },
+    { org:'AmericanNational', id:7,  name:'svpx-tfsbuild07', pool:'Default', jobs_28d:430, avg_duration_s:820, utilization_pct:45 },
+    { org:'AmericanNational', id:9,  name:'svpx-tfsbuild09', pool:'Default', jobs_28d:380, avg_duration_s:690, utilization_pct:38 },
+    { org:'AmericanNational', id:10, name:'svpx-tfsbuild10', pool:'Default', jobs_28d:410, avg_duration_s:760, utilization_pct:41 },
+    { org:'AmericanNational', id:11, name:'svpx-tfsbuild11', pool:'Default', jobs_28d:390, avg_duration_s:800, utilization_pct:40 },
+  ],
+  summary_28d: {
+    total_builds: 4920,
+    builds_per_day: 176,
+    by_project: {
+      'AmericanNational/ExpertApp': {
+        builds: 1420,
+        // UTC hours 0-23; peak 14-22 (08:00-16:00 CST), nightly batch spike at 08 UTC
+        hour_distribution: [2,1,1,1,1,2,2,4,22,8,6,5,5,6,52,68,72,80,76,64,48,32,18,8],
+      },
+      'AmericanNational/ESign': {
+        builds: 1040,
+        hour_distribution: [2,1,1,1,1,2,2,4,18,6,5,4,4,5,38,50,54,60,55,48,36,24,14,6],
+      },
+      'AmericanNational/ExpertLeads': {
+        builds: 740,
+        hour_distribution: [1,0,0,0,1,1,1,3,14,4,3,3,3,4,28,36,38,42,40,34,26,18,10,4],
+      },
+      'AmericanNational/ExpertService': {
+        builds: 860,
+        hour_distribution: [1,1,0,0,1,1,1,3,16,5,4,3,3,5,32,42,44,48,46,38,30,20,12,4],
+      },
+      'AmericanNational/ExpertTask': {
+        builds: 860,
+        hour_distribution: [1,1,0,0,1,1,1,3,16,5,4,3,3,5,30,40,42,46,44,36,28,18,10,4],
+      },
+    },
+  },
+  carbon_per_agent_gco2e: 12.45,
+  total_carbon_gco2e: 136.9,
+  grid_intensity_gco2_kwh: 420,
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -66,18 +189,35 @@ export default function App() {
   const [regions, setRegions] = useState([]);
   const [selectedApp, setSelectedApp] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
+  const [adoDetails, setAdoDetails] = useState(null);
+  const [adoError,   setAdoError]   = useState(null);
+  const [adoLoading, setAdoLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [liveMode, setLiveMode] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(liveMode);
+    // If AzureDevOps is already selected, refresh the detail panel to match the new mode
+    if (selectedApp?.app_name === 'AzureDevOps') {
+      setAdoDetails(null);
+      setAdoError(null);
+      if (!liveMode) {
+        setAdoDetails(ADO_MOCK);
+        setAdoLoading(false);
+      } else {
+        setAdoLoading(true);
+        doAdoFetch();
+      }
+    }
+  }, [liveMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchData = async () => {
+  const fetchData = async (live = liveMode) => {
     setLoading(true);
     setError(null);
     try {
-      console.log('Fetching data from /api/compare...');
-      const r = await fetch('/api/compare');
+      const url = live ? '/api/compare?live=true' : '/api/compare';
+      console.log('Fetching data from', url);
+      const r = await fetch(url);
       console.log('Response status:', r.status);
       
       if (!r.ok) {
@@ -101,9 +241,53 @@ export default function App() {
     setLoading(false);
   };
 
+  // Live ADO fetch — retries while backend pre-warm is still running
+  const doAdoFetch = () => {
+    const fetchOnce = () => {
+      fetch('/api/ado/details')
+        .then(async r => {
+          const text = await r.text();
+          try { return JSON.parse(text); }
+          catch { return { ok: false, reason: 'proxy_error',
+            message: `Backend returned a non-JSON response (HTTP ${r.status}). ` +
+                     `The backend container may be down or still starting up. ` +
+                     `Run: docker-compose up --build` }; }
+        })
+        .then(data => {
+          if (data && data.reason === 'loading') {
+            // pre-warm still running — retry after suggested delay
+            const delay = (data.retry_after || 8) * 1000;
+            setTimeout(fetchOnce, delay);
+          } else if (data && data.ok === false) {
+            setAdoError(data.message || 'ADO request failed.');
+            setAdoLoading(false);
+          } else {
+            setAdoDetails(data);
+            setAdoLoading(false);
+          }
+        })
+        .catch(err => { setAdoError('Could not reach backend: ' + err.message); setAdoLoading(false); });
+    };
+    fetchOnce();
+  };
+
   const selectApp = (app) => {
     setSelectedApp(app.app);
     setRecommendations(app.recommendations || []);
+    if (app.app.app_name === 'AzureDevOps') {
+      setAdoDetails(null);
+      setAdoError(null);
+      if (!liveMode) {
+        // Live mode is off — show static mock data immediately, no API call
+        setAdoDetails(ADO_MOCK);
+        setAdoLoading(false);
+      } else {
+        setAdoLoading(true);
+        doAdoFetch();
+      }
+    } else {
+      setAdoDetails(null);
+    }
   };
 
   const getSCIColor = (sci) => {
@@ -114,17 +298,14 @@ export default function App() {
 
   const fmt = (n, d=2) => Number(n).toFixed(d);
   const fmtLarge = n => Number(n) > 1000 ? `${(Number(n)/1000).toFixed(1)}k` : fmt(n, 0);
+  const fmtSCI = (n) => {
+    if (n >= 0.01)      return n.toFixed(4);
+    if (n >= 0.0001)    return n.toFixed(6);
+    if (n >= 0.000001)  return n.toFixed(8);
+    return n.toExponential(2);
+  };
 
-  if (loading) {
-    return (
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', color:T.dim }}>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:48, marginBottom:16 }}>🌍</div>
-          <div>Loading Enterprise SCI Platform...</div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingGlobe />;
 
   if (error) {
     return (
@@ -194,15 +375,24 @@ export default function App() {
           <span style={{ fontWeight:700, fontSize:18 }}>Enterprise <span style={{ color:T.green }}>SCI</span> Platform</span>
           <Badge color={T.purple}>Multi-App Comparison</Badge>
         </div>
-        <button className="btn-secondary" onClick={fetchData}>
-          ↻ Refresh Data
-        </button>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <button
+            className={liveMode ? 'btn-primary' : 'btn-secondary'}
+            onClick={() => setLiveMode(v => !v)}
+            title={liveMode ? 'Using live Prometheus metrics' : 'Using static config data'}
+          >
+            {liveMode ? '⚡ Live Data ON' : '⚡ Live Data OFF'}
+          </button>
+          <button className="btn-secondary" onClick={() => fetchData(liveMode)}>
+            ↻ Refresh
+          </button>
+        </div>
       </div>
 
       <div style={{ padding:20, maxWidth:1600, margin:'0 auto' }}>
 
         {/* APP COMPARISON GRID */}
-        <Card title="Application SCI Comparison" badge="live" style={{ marginBottom:20 }}>
+        <Card title="Application SCI Comparison" badge={liveMode ? 'prometheus-live' : 'static'} style={{ marginBottom:20 }}>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))', gap:12 }}>
             {apps.map((item, i) => {
               const app = item.app;
@@ -216,11 +406,22 @@ export default function App() {
                 >
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'start', marginBottom:12 }}>
                     <div style={{ fontWeight:600, fontSize:16 }}>{app.app_name}</div>
-                    <Badge color={color}>{i+1}</Badge>
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:4 }}>
+                      <Badge color={color}>{i+1}</Badge>
+                      <Badge color={
+                        app.metrics_source === 'prometheus-live' || app.functional_unit_source === 'azure-devops-live'
+                        || (liveMode && app.app_name === 'AzureDevOps')
+                          ? T.green : T.dim
+                      }>
+                        {app.metrics_source === 'prometheus-live' || app.functional_unit_source === 'azure-devops-live'
+                        || (liveMode && app.app_name === 'AzureDevOps')
+                          ? '⚡ live' : '📄 static'}
+                      </Badge>
+                    </div>
                   </div>
                   
                   <div style={{ fontSize:32, fontWeight:700, color, marginBottom:8 }}>
-                    {app.sci < 0.001 ? app.sci.toExponential(2) : fmt(app.sci, 4)}
+                    {fmtSCI(app.sci)}
                   </div>
                   <div style={{ fontSize:11, color:T.dim, marginBottom:12 }}>gCO₂eq / {app.functional_unit}</div>
                   
@@ -229,6 +430,8 @@ export default function App() {
                     <div><span style={{ color:T.dim }}>Energy:</span> <strong>{fmt(app.total_energy_kwh,3)}</strong> kWh</div>
                     <div><span style={{ color:T.dim }}>Servers:</span> <strong>{app.server_count}</strong>×{app.server_type.split('-').pop()}</div>
                     <div><span style={{ color:T.dim }}>Region:</span> <strong>{app.region}</strong></div>
+                    <div><span style={{ color:T.dim }}>CPU:</span> <strong>{fmt(app.cpu_utilization_percent, 1)}</strong>%</div>
+                    <div><span style={{ color:T.dim }}>Mem:</span> <strong>{fmt(app.memory_utilization_percent, 1)}</strong>%</div>
                   </div>
                   
                   {item.recommendations?.length > 0 && (
@@ -286,12 +489,214 @@ export default function App() {
               </Card>
             </div>
 
+            {/* ADO AGENT DRILL-DOWN — only for AzureDevOps card */}
+            {selectedApp.app_name === 'AzureDevOps' && (
+              <Card title="Azure DevOps — CI/CD Agent & Pipeline Breakdown"
+                    badge={adoDetails ? (liveMode ? 'live' : 'mock data') : adoLoading ? 'loading…' : 'unavailable'}
+                    style={{ marginBottom:20 }}>
+                {adoLoading && (
+                  <div style={{ color:T.dim, padding:16, textAlign:'center' }}>Fetching ADO data…</div>
+                )}
+                {!adoLoading && adoError && (
+                  <div style={{ color:T.amber, fontSize:13 }}>
+                    <strong style={{ display:'block', marginBottom:4 }}>⚠ ADO unavailable</strong>
+                    {adoError}
+                  </div>
+                )}
+                {!adoLoading && !adoDetails && !adoError && (
+                  <div style={{ color:T.dim, fontSize:13 }}>No ADO data returned.</div>
+                )}
+                {adoDetails && (
+                  <>
+                    {/* 28-day summary strip */}
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
+                      {[
+                        { label:'Builds (28d)',    value: adoDetails.summary_28d?.total_builds ?? '—',    unit:'', color:T.blue },
+                        { label:'Agents Online',   value: (adoDetails.agents||[]).filter(a=>a.status==='online').length, unit:`of ${(adoDetails.agents||[]).length}`, color:T.green },
+                        { label:'Builds/day',      value: adoDetails.summary_28d?.builds_per_day ?? '—',  unit:'avg', color:T.blue },
+                        { label:'Carbon/agent/hr', value: fmt(adoDetails.carbon_per_agent_gco2e || 0, 2), unit:'gCO₂eq', color:T.green },
+                      ].map(m => (
+                        <div key={m.label} style={{ background:T.bg, borderRadius:6, padding:12 }}>
+                          <div style={{ fontSize:11, color:T.dim, marginBottom:4, textTransform:'uppercase', letterSpacing:.5 }}>{m.label}</div>
+                          <div style={{ fontSize:22, fontWeight:700, color:m.color }}>{m.value}</div>
+                          {m.unit && <div style={{ fontSize:11, color:T.dim }}>{m.unit}</div>}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* ── SECTION 1: Agent Utilization Table ── */}
+                    {(adoDetails.agent_utilization||[]).length > 0 && (() => {
+                      const agentMap = {};
+                      (adoDetails.agents||[]).forEach(a => { agentMap[`${a.org}:${a.id}`] = a; });
+                      const fmtDur = s => {
+                        if (!s) return '—';
+                        const m = Math.floor(s/60), sec = s%60;
+                        return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+                      };
+                      return (
+                        <div style={{ marginBottom:20 }}>
+                          <div style={{ fontSize:13, fontWeight:600, marginBottom:8, color:T.dim }}>
+                            AGENT LOAD — LAST 28 DAYS ({adoDetails.agent_utilization.length} agents with activity)
+                          </div>
+                          <div style={{ overflowX:'auto' }}>
+                            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                              <thead style={{ position:'sticky', top:0, background:T.surf, zIndex:1 }}>
+                                <tr style={{ borderBottom:`1px solid ${T.border}` }}>
+                                  {['Status','Agent','Pool','Org','Jobs (28d)','Avg Duration','Utilization'].map(h => (
+                                    <th key={h} style={{ textAlign: h==='Jobs (28d)'||h==='Avg Duration'||h==='Utilization' ? 'right':'left', padding:'6px 10px', color:T.dim, fontWeight:600, whiteSpace:'nowrap', fontSize:11 }}>{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {adoDetails.agent_utilization.map((au, i) => {
+                                  const live = agentMap[`${au.org}:${au.id}`];
+                                  const busy   = live && !!live.current_job;
+                                  const online = live && live.status === 'online';
+                                  const dot    = !live ? '#666' : !online ? T.red : busy ? T.amber : T.green;
+                                  const statusLabel = !live ? 'unknown' : !online ? 'offline' : busy ? 'busy' : 'idle';
+                                  const util = au.utilization_pct || 0;
+                                  const barColor = util > 60 ? T.red : util > 30 ? T.amber : T.green;
+                                  return (
+                                    <tr key={i} style={{ borderBottom:`1px solid ${T.border}22`, background: i%2===0 ? 'transparent' : T.bg+'88' }}>
+                                      <td style={{ padding:'6px 10px' }}>
+                                        <span style={{ display:'inline-flex', alignItems:'center', gap:5 }}>
+                                          <span style={{ width:8, height:8, borderRadius:'50%', background:dot, flexShrink:0, display:'inline-block' }}/>
+                                          <span style={{ fontSize:10, color:dot }}>{statusLabel}</span>
+                                        </span>
+                                      </td>
+                                      <td style={{ padding:'6px 10px', fontWeight:600, whiteSpace:'nowrap' }}>{au.name}</td>
+                                      <td style={{ padding:'6px 10px', color:T.dim, fontSize:11 }}>{au.pool}</td>
+                                      <td style={{ padding:'6px 10px', color:T.dim, fontSize:11 }}>{au.org}</td>
+                                      <td style={{ padding:'6px 10px', textAlign:'right', color:T.blue, fontWeight:700 }}>{(au.jobs_28d||0).toLocaleString()}</td>
+                                      <td style={{ padding:'6px 10px', textAlign:'right', color:T.dim }}>{fmtDur(au.avg_duration_s)}</td>
+                                      <td style={{ padding:'6px 10px', textAlign:'right', minWidth:120 }}>
+                                        <div style={{ display:'flex', alignItems:'center', gap:6, justifyContent:'flex-end' }}>
+                                          <div style={{ flex:1, maxWidth:70, height:6, background:T.border, borderRadius:3, overflow:'hidden' }}>
+                                            <div style={{ width:`${Math.min(util,100)}%`, height:'100%', background:barColor, borderRadius:3 }}/>
+                                          </div>
+                                          <span style={{ fontSize:11, color:barColor, width:36, textAlign:'right' }}>{util}%</span>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                          {/* Agents with no recorded jobs */}
+                          {(() => {
+                            const activeNames = new Set(adoDetails.agent_utilization.map(a=>`${a.org}:${a.id}`));
+                            const idle = (adoDetails.agents||[]).filter(a => !activeNames.has(`${a.org}:${a.id}`));
+                            return idle.length > 0 ? (
+                              <div style={{ marginTop:8, fontSize:11, color:T.dim }}>
+                                {idle.length} agent{idle.length>1?'s':''} had no completed jobs in 28 days (candidates for decommission): {idle.map(a=>a.name).join(', ')}
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── SECTION 2: Project Build-Hour Heatmap ── */}
+                    {Object.keys(adoDetails.summary_28d?.by_project || {}).length > 0 && (() => {
+                      // Typical ERCOT hourly relative carbon intensity (0=cleanest, 1=dirtiest)
+                      // Low overnight (wind), higher midday/afternoon (demand peak)
+                      const ERCOT_REL = [
+                        0.22,0.18,0.16,0.16,0.20,0.30,0.46,0.60,0.70,0.72,0.68,0.62,
+                        0.58,0.64,0.72,0.78,0.82,0.88,0.85,0.76,0.62,0.50,0.38,0.28,
+                      ];
+                      const intensityColor = r => r > 0.65 ? T.red : r > 0.42 ? T.amber : T.green;
+                      const allProjects = Object.entries(adoDetails.summary_28d.by_project || {}).map(([key,v])=>({key,...v})).sort((a,b)=>(b.builds||0)-(a.builds||0));
+                      const projects = allProjects.slice(0, 20);
+                      const maxCount = Math.max(1, ...allProjects.flatMap(p => (p.hour_dist||p.hour_distribution||[])));
+                      return (
+                        <div>
+                          <div style={{ fontSize:13, fontWeight:600, marginBottom:4, color:T.dim }}>
+                            BUILD TIMING BY PROJECT — LAST 28 DAYS (UTC hours)
+                          </div>
+                          <div style={{ fontSize:11, color:T.dim, marginBottom:10, display:'flex', gap:16, flexWrap:'wrap' }}>
+                            <span>Bar color = ERCOT grid intensity at that hour:</span>
+                            {[['Low carbon','green'],['Medium','amber'],['Peak carbon','red']].map(([l,c])=>(
+                              <span key={l} style={{ display:'flex', alignItems:'center', gap:4 }}>
+                                <span style={{ width:10, height:10, borderRadius:2, background:T[c], display:'inline-block' }}/>
+                                {l}
+                              </span>
+                            ))}
+                            <span style={{ color:T.dim }}>| Bar height = build volume at that hour</span>
+                          </div>
+                          <div style={{ overflowX:'auto' }}>
+                            <table style={{ borderCollapse:'collapse', fontSize:11, width:'100%' }}>
+                              <thead style={{ position:'sticky', top:0, background:T.surf, zIndex:1 }}>
+                                <tr style={{ borderBottom:`1px solid ${T.border}` }}>
+                                  <th style={{ textAlign:'left', padding:'4px 8px', color:T.dim, whiteSpace:'nowrap' }}>Project</th>
+                                  <th style={{ textAlign:'left', padding:'4px 8px', color:T.dim }}>Org</th>
+                                  <th style={{ textAlign:'right', padding:'4px 8px', color:T.dim }}>Builds</th>
+                                  <th style={{ padding:'4px 8px', color:T.dim }}>
+                                    <div style={{ display:'flex', gap:0, fontSize:9 }}>
+                                      {Array.from({length:24},(_,h)=>(
+                                        <div key={h} style={{ width:9, textAlign:'center', color: ERCOT_REL[h]>0.65?T.red:ERCOT_REL[h]>0.42?T.amber:T.green }}>
+                                          {h%6===0?h:''}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {projects.map((row, i) => {
+                                  const [rowOrg, rowProject] = row.key.split('/');
+                                  const dist = (row.hour_distribution||row.hour_dist||[]).length===24
+                                    ? (row.hour_distribution||row.hour_dist) : Array(24).fill(0);
+                                  const peakHour = dist.indexOf(Math.max(...dist));
+                                  const peakCarbon = ERCOT_REL[peakHour] > 0.65;
+                                  return (
+                                    <tr key={i} style={{ borderBottom:`1px solid ${T.border}22`, background: i%2===0?'transparent':T.bg+'88' }}>
+                                      <td style={{ padding:'4px 8px', fontWeight:500, maxWidth:180, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                        {peakCarbon && <span title={`Peak builds at ${peakHour}:00 UTC (high carbon hour)`} style={{ color:T.amber, marginRight:4 }}>⚠</span>}
+                                        {rowProject}
+                                      </td>
+                                      <td style={{ padding:'4px 8px', color:T.dim, whiteSpace:'nowrap' }}>{rowOrg}</td>
+                                      <td style={{ padding:'4px 8px', textAlign:'right', color:T.blue }}>{(row.builds||0).toLocaleString()}</td>
+                                      <td style={{ padding:'4px 8px' }}>
+                                        <div style={{ display:'flex', gap:1, alignItems:'flex-end', height:30 }}>
+                                          {dist.map((cnt, h) => {
+                                            const pct = maxCount > 0 ? cnt / maxCount : 0;
+                                            const ht = Math.max(pct * 28, cnt > 0 ? 2 : 0);
+                                            return (
+                                              <div
+                                                key={h}
+                                                title={`${h}:00 UTC — ${cnt} build${cnt!==1?'s':''}`}
+                                                style={{ width:8, height:ht, background: cnt>0 ? intensityColor(ERCOT_REL[h]) : T.border+'44', borderRadius:1, alignSelf:'flex-end', flexShrink:0 }}
+                                              />
+                                            );
+                                          })}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                          {allProjects.length > 20 && (
+                            <div style={{ fontSize:11, color:T.dim, marginTop:6 }}>
+                              Showing top 20 of {allProjects.length} projects by build volume.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
+              </Card>
+            )}
+
             {/* OPTIMIZATION RECOMMENDATIONS */}
             {recommendations.length > 0 && (
               <Card title="Optimization Recommendations" badge={`${recommendations.length} found`} style={{ marginBottom:20 }}>
                 <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
                   {recommendations.map((rec, i) => {
-                    const icons = { region_relocation:'🌍', server_rightsizing:'⚙️', time_shifting:'⏰' };
+                    const icons = { region_relocation:'🌍', server_rightsizing:'⚙️', time_shifting:'⏰', replica_scaledown:'📉', cloud_migration:'☁️' };
                     const priorityColors = { high:T.red, medium:T.amber, low:T.blue };
                     return (
                       <div key={i} style={{ background:T.surf2, border:`1px solid ${T.border}`, borderRadius:8, padding:16 }}>
@@ -346,6 +751,17 @@ export default function App() {
                         {rec.type === 'time_shifting' && (
                           <div style={{ fontSize:12 }}>
                             <strong>Best Hours:</strong> <span style={{ color:T.green }}>{rec.best_hours}</span>
+                          </div>
+                        )}
+
+                        {rec.type === 'cloud_migration' && (
+                          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, fontSize:12 }}>
+                            <div><strong>Current:</strong> {rec.current_server} @ {rec.current_region}</div>
+                            <div><strong>Target:</strong> <span style={{ color:T.green }}>{rec.recommended_server} @ {rec.recommended_region}</span></div>
+                            <div><strong>PUE (on-prem → Azure):</strong> <span style={{ color:T.amber }}>{rec.pue_current}</span> → <span style={{ color:T.green }}>{rec.pue_azure}</span> <span style={{ color:T.green }}>(-{rec.pue_saving_percent}%)</span></div>
+                            <div><strong>Grid Intensity:</strong> {rec.grid_intensity_gco2_kwh} gCO₂/kWh ({rec.renewable_percent}% renewable)</div>
+                            <div><strong>Est. Cost:</strong> <span style={{ color:T.blue }}>${rec.estimated_cost_per_hour_usd}/hr</span></div>
+                            <div><strong>Model:</strong> {rec.cost_model}</div>
                           </div>
                         )}
                       </div>

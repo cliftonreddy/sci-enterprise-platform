@@ -1,42 +1,43 @@
 {
   "app_name": "ExpertTask",
-  "description": "Video streaming platform with live and on-demand content",
+  "description": "ExpertTask - internal agent task management tool (beta)",
   "server_config": {
-    "server_type": "azure-d4s-v3",
-    "count": 24,
-    "region": "eastus",
-    "notes": "Premium SSD for fast video chunk delivery, moderate compute needs"
+    "server_type": "vsphere-worker-node",
+    "count": 1,
+    "region": "on-premises-datacenter",
+    "notes": "Runs on svpx-docknode* VMs in League City TX. Replica count overridden live from Kubernetes API."
   },
   "average_usage": {
     "cpu_utilization_percent": 42,
     "memory_utilization_percent": 72,
     "storage_io_ops_per_sec": 4500,
     "network_ingress_gbps": 0.5,
-    "network_egress_gbps": 18.5,
-    "notes": "Extremely high egress bandwidth for video streaming"
+    "network_egress_gbps": 0.1,
+    "notes": "Beta rollout - business hours usage"
   },
   "workload_pattern": {
-    "type": "bandwidth-heavy",
-    "peak_hours": "18:00-23:00 EST",
-    "weekend_multiplier": 2.2,
-    "seasonal_peaks": ["Super Bowl", "Holidays", "Summer vacation"]
+    "type": "steady-state",
+    "peak_hours": "08:00-17:00 CST",
+    "weekend_multiplier": 0.05,
+    "seasonal_peaks": ["Beta phase 1", "General availability launch"]
   },
   "functional_unit": {
-    "type": "streaming-hour",
-    "description": "one hour of video delivered to viewer",
-    "average_per_day": 4200000,
-    "average_per_hour": 175000
+    "type": "api-request",
+    "description": "one HTTP API request to ExpertTask service",
+    "average_per_day": 14100,
+    "average_per_hour": 588,
+    "source": "Projected: ~30% below ExpertService (20,143/day). Update when GA tracking is live."
   },
   "business_metrics": {
-    "daily_active_users": 1850000,
-    "average_watch_time_hours": 2.27,
-    "average_bitrate_mbps": 4.2
+    "ga_views_last_28_days": 31,
+    "ga_active_users_last_28_days": 13,
+    "status": "beta",
+    "source": "Google Analytics - only beta documentation page tracked (Jun 26 - Jul 23, 2026)"
   },
   "optimization_constraints": {
     "max_latency_ms": 2000,
-    "min_availability_percent": 99.9,
-    "compliance": ["COPPA", "GDPR"],
-    "data_residency": ["US", "EU"],
-    "cdn_required": true
+    "min_availability_percent": 99.5,
+    "compliance": ["SOC2", "state insurance regulations"],
+    "data_residency": ["US - must remain on-prem"]
   }
 }

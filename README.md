@@ -141,6 +141,69 @@ docker compose up --build
 
 ---
 
+## Credential Files
+
+The dashboard runs fully with static fallback data — **no credentials are required to start it**. Each integration below degrades gracefully when its credential file or keys are absent:
+
+| Missing credential | Fallback behaviour |
+|---|---|
+| `ELECTRICITY_MAPS_TOKEN` / `WATTTIME_*` | Grid intensity uses static IEA 2022 values from `grid-regions.json` |
+| `ga4-service-account.json` / `GA4_PROPERTY_ID` | Functional units use static hourly estimates from each app's `config.json` |
+| `ADO_PAT` / `ADO_ORGS` | Build counts use static estimates; live ADO endpoints return a "not configured" message |
+| `ucp-bundle` / `KUBECONFIG_DIR` | Prometheus metrics disabled; replica counts and CPU utilisation use static `config.json` values |
+
+The only hard requirement is that **`.env` must exist** (even if all values are blank) because Docker Compose reads it at startup. Running `cp .env.example .env` is sufficient.
+
+The sections below explain each file only if you want to enable the corresponding live data source. None of these files should ever be committed — they are all covered by `.gitignore`.
+
+### 1. `.env` — API keys and connection settings
+**Location:** `sci-carbon-dashboard/.env`
+**Template:** copy from `sci-carbon-dashboard/.env.example`
+
+Required to connect to any external service:
+
+| What you're enabling | Keys to populate |
+|---|---|
+| **Electricity Maps** live grid carbon intensity | `ELECTRICITY_MAPS_TOKEN` |
+| **WattTime v3** live MOER data | `WATTTIME_USER`, `WATTTIME_PASS` |
+| **Google Analytics 4** live functional unit counts | `GA4_PROPERTY_ID`, `GOOGLE_APPLICATION_CREDENTIALS` |
+| **Azure DevOps** live pipeline run counts | `ADO_ORG`, `ADO_ORGS`, `ADO_PAT`, `ADO_PROJECTS` |
+| **Mirantis MKE / Prometheus** live replica & CPU metrics | `KUBECONFIG_DIR` |
+
+Without this file the backend will not start. Copy the example first:
+```bash
+cp .env.example .env
+```
+
+---
+
+### 2. `ga4-service-account.json` — Google service account key
+**Location:** `sci-carbon-dashboard/ga4-service-account.json`
+*(path must match `GOOGLE_APPLICATION_CREDENTIALS` in `.env`)*
+
+Required to pull live session/user counts from **Google Analytics 4** as the functional unit for GA-tracked applications (e.g. ExpertApp). Without this file GA4 functional units fall back to static hourly estimates.
+
+To obtain:
+1. Open [Google Cloud Console](https://console.cloud.google.com/) → IAM & Admin → Service Accounts
+2. Create or select a service account and add a JSON key
+3. In GA4 Admin → Property Access Management, grant the service account **Viewer** role
+4. Download the key file and save it at the path above
+
+---
+
+### 3. `ucp-bundle-<username>/` — Mirantis MKE client bundle
+**Location:** one level above `sci-carbon-dashboard/` — e.g. `ucp-bundle-cliftonreddy/` at the workspace root
+Set `KUBECONFIG_DIR=../ucp-bundle-<username>` in `.env` (already the default).
+
+Required to fetch **live Prometheus CPU/replica metrics** from the Mirantis MKE cluster. Without this directory the backend falls back to the static utilization values in each app's `config.json`.
+
+To obtain:
+1. Log in to your MKE UI → top-right user menu → **Client Bundle** → **New Client Bundle**
+2. Download and extract the zip; the extracted folder is your bundle directory
+3. Update `KUBECONFIG_DIR` in `.env` to point to the extracted folder
+
+---
+
 ## API Endpoints
 
 | Method | Path | Description |
@@ -247,7 +310,10 @@ GET /v3/forecast?region=CAISO_NORTH&signal_type=co2_moer
 ## File Structure
 
 ```
-sci-enterprise/
+sci-carbon-dashboard/
+├── .env                        # secrets — copy from .env.example, never commit
+├── .env.example                # committed template with all keys blank
+├── ga4-service-account.json    # Google SA key — never commit (gitignored)
 ├── backend/
 │   ├── app.py              # Flask API with optimization engine
 │   ├── requirements.txt
@@ -275,6 +341,8 @@ sci-enterprise/
 ├── .env.example
 └── README.md
 ```
+
+> **Note:** `ucp-bundle-<username>/` lives one level above this directory (workspace root). Set `KUBECONFIG_DIR` in `.env` to its path.
 
 ---
 

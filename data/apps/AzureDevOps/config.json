@@ -1,0 +1,45 @@
+{
+  "app_name": "AzureDevOps",
+  "description": "Azure DevOps CI/CD pipelines — on-premises build and release agents for all American National applications",
+  "server_config": {
+    "server_type": "vsphere-build-node",
+    "count": 11,
+    "region": "on-premises-datacenter",
+    "notes": "Build agents run on svpx-tfsbuild* VMs (Intel Xeon Gold 6254, 4 vCPU each). Count = 11 concurrent agent VMs from ADO Agent Pool. Confirm exact count via ADO → Project Settings → Agent Pools → Agents tab."
+  },
+  "average_usage": {
+    "cpu_utilization_percent": 60,
+    "memory_utilization_percent": 65,
+    "storage_io_ops_per_sec": 1200,
+    "network_ingress_gbps": 0.0001,
+    "network_egress_gbps": 0.00014,
+    "notes": "PLACEHOLDER — build agents spike to 80-95% CPU during compile/test, idle ~5% between jobs. 60% represents a blended average across a typical working day. Replace with actual agent pool utilization from ADO diagnostics or vCenter."
+  },
+  "workload_pattern": {
+    "type": "burst",
+    "peak_hours": "08:00-17:00 CST",
+    "weekend_multiplier": 0.1,
+    "seasonal_peaks": ["Sprint end (bi-weekly)", "Release week"],
+    "notes": "Pipeline activity follows developer hours with nightly scheduled builds at 02:00 CST"
+  },
+  "functional_unit": {
+    "type": "pipeline_run",
+    "description": "one completed pipeline run (build or release) across all ADO projects",
+    "average_per_day": 190,
+    "average_per_hour": 8,
+    "source": "STATIC ESTIMATE — becomes live automatically once ADO_ORG and ADO_PAT are set in .env. No code changes needed."
+  },
+  "business_metrics": {
+    "estimated_pipelines_per_day": 190,
+    "estimated_avg_duration_minutes": 15,
+    "agent_count_placeholder": 11,
+    "source": "Placeholder — set ADO_ORG + ADO_PAT in .env to pull actuals from ADO REST API"
+  },
+  "optimization_constraints": {
+    "max_latency_ms": 900000,
+    "min_availability_percent": 99.0,
+    "compliance": ["SOC2"],
+    "data_residency": ["US - must remain on-prem"]
+  }
+}
+

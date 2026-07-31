@@ -1,0 +1,53 @@
+{
+  "name": "vSphere Worker Node",
+  "provider": "On-Premises",
+  "instance_type": "vsphere-worker-node",
+  "description": "Hyper-V VM - 6 vCPU / 31 GB RAM worker node (svpx-docknode*). Runs on Intel Xeon Gold 6244 host in League City, TX datacenter.",
+  "specifications": {
+    "vcpus": 6,
+    "vcpus_total": 8,
+    "memory_gb": 31,
+    "memory_total_gb": 32,
+    "cpu_model": "Intel Xeon Gold 6244 @ 3.60GHz (Cascade Lake, 8-core, 150W TDP) — confirmed via lscpu on svpx-docknode01",
+    "cpu_tdp_watts": 150,
+    "storage_type": "Hyper-V Virtual Disk (Virtual Disk model, local or SAN)",
+    "network_bandwidth_gbps": 10,
+    "notes": "VM has 6 vCPUs out of 8 physical cores. Effective VM TDP share = 150W × (6/8) = 112.5W. Hypervisor reports as Microsoft (Hyper-V), dmidecode confirms Microsoft Corporation / Virtual Machine. svpx-tfsbuild12 and svpx-dockmgr01 use Intel Xeon Gold 6254 (18-core, 200W) — different host hardware."
+  },
+  "embodied_carbon": {
+    "vm_share_notes": "Embodied carbon allocated proportionally: physical CPU × (6 vCPU / 8 physical cores).",
+    "cpu": {
+      "gco2e": 48750,
+      "source": "Boavizta estimate for Intel Xeon Gold 6244 (Cascade Lake 14nm, ~65,000 gCO2e) × 6/8 vCPU share",
+      "notes": "Intel Xeon Gold 6244 — 8-core, manufactured at Intel 14nm fabs"
+    },
+    "memory": {
+      "gco2e_per_gb": 12.5,
+      "total_gco2e": 387,
+      "source": "CCF - 31 GB DDR4 VM allocation"
+    },
+    "storage": {
+      "gco2e": 5000,
+      "source": "Proportional virtual disk share estimate (320GB total allocated)"
+    },
+    "infrastructure_share": {
+      "gco2e": 10000,
+      "source": "Proportional share of motherboard, chassis, PSU, NIC, cooling"
+    },
+    "total_server_embodied_gco2e": 64137,
+    "allocated_share_gco2e": 64137,
+    "allocation_method": "Proportional vCPU share of physical host (6/8 cores)"
+  },
+  "lifespan": {
+    "years": 5,
+    "hours": 43800,
+    "seconds": 157680000,
+    "notes": "Aligned with physical host refresh cycle"
+  },
+  "pue": {
+    "value": 1.58,
+    "source": "Uptime Institute 2021 average for enterprise data centers",
+    "notes": "Replace with actual League City datacenter PUE if known"
+  },
+  "cost_per_hour_usd": null
+}

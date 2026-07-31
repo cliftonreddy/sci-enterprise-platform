@@ -1,0 +1,45 @@
+{
+  "app_name": "ESign",
+  "description": "ESign - electronic signature dashboard for policy and document signing",
+  "server_config": {
+    "server_type": "vsphere-worker-node",
+    "count": 1,
+    "region": "on-premises-datacenter",
+    "notes": "Runs on svpx-docknode* VMs in League City TX. Replica count overridden live from Kubernetes API."
+  },
+  "average_usage": {
+    "cpu_utilization_percent": 48,
+    "memory_utilization_percent": 64,
+    "storage_io_ops_per_sec": 2200,
+    "network_ingress_gbps": 0.6,
+    "network_egress_gbps": 1.2,
+    "notes": "Steady-state agent/client usage during business hours"
+  },
+  "workload_pattern": {
+    "type": "steady-state",
+    "peak_hours": "08:00-17:00 CST",
+    "weekend_multiplier": 0.1,
+    "seasonal_peaks": ["Open Enrollment", "Q1 Policy Renewals"]
+  },
+  "ga_page_title": "ESign",
+  "functional_unit": {
+    "type": "page-view",
+    "description": "one page view of ESign dashboard",
+    "average_per_day": 50,
+    "average_per_hour": 2,
+    "source": "Google Analytics - 1,388 views over 28 days (Jun 26 - Jul 23, 2026)"
+  },
+  "business_metrics": {
+    "views_last_28_days": 1388,
+    "active_users_last_28_days": 435,
+    "views_per_active_user": 3.19,
+    "avg_engagement_time_seconds": 209,
+    "source": "Google Analytics"
+  },
+  "optimization_constraints": {
+    "max_latency_ms": 2000,
+    "min_availability_percent": 99.5,
+    "compliance": ["SOC2", "state insurance regulations"],
+    "data_residency": ["US - must remain on-prem"]
+  }
+}

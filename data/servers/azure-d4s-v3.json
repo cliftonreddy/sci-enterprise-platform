@@ -49,6 +49,6 @@
     "value": 1.18,
     "source": "Microsoft Azure published sustainability data"
   },
-  "regions_available": ["eastus", "westus2", "westeurope", "southeastasia"],
+  "regions_available": ["eastus", "westus2", "westeurope", "southeastasia", "southcentralus"],
   "cost_per_hour_usd": 0.192
 }

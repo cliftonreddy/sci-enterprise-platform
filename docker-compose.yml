@@ -1,13 +1,28 @@
 version: "3.8"
 services:
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: sci-enterprise-backend
     environment:
       - WATTTIME_USER=${WATTTIME_USER:-}
       - WATTTIME_PASS=${WATTTIME_PASS:-}
+      - ELECTRICITY_MAPS_TOKEN=${ELECTRICITY_MAPS_TOKEN:-}
+      - GRID_PROVIDER=${GRID_PROVIDER:-electricitymaps}
+      - KUBECONFIG=/app/kubeconfig/kube.yml
+      - KUBECTL_PATH=/usr/local/bin/kubectl
+      - PROMETHEUS_POD=${PROMETHEUS_POD:-ucp-metrics-7n2kc}
+      - GA4_PROPERTY_ID=${GA4_PROPERTY_ID:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/ga4-credentials.json
+      - ADO_ORG=${ADO_ORG:-}
+      - ADO_ORGS=${ADO_ORGS:-}
+      - ADO_PAT=${ADO_PAT:-}
+      - ADO_PROJECTS=${ADO_PROJECTS:-}
     volumes:
       - ./data:/app/data:ro
+      - ${KUBECONFIG_DIR:-./ucp-bundle-cliftonreddy}:/app/kubeconfig:ro
+      - ${GA4_CREDENTIALS_FILE:-./ga4-service-account.json}:/app/ga4-credentials.json:ro
     ports:
       - "5000:5000"
     restart: unless-stopped
@@ -16,7 +31,7 @@ services:
     build: ./frontend
     container_name: sci-enterprise-frontend
     ports:
-      - "3000:80"
+      - "3000:8080"
     depends_on:
       - backend
     restart: unless-stopped
