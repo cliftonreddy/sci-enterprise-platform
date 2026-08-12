@@ -1,0 +1,12 @@
+services:
+  graalvm-optimizer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: graalvm-DataProcessor-java
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./out:/app/out
+    environment:
+      - GRAAL_HOME=/usr/lib/graalvm

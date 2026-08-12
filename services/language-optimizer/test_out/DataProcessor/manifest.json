@@ -1,0 +1,15 @@
+{
+  "source_language": "java",
+  "source_file": "DataProcessor.java",
+  "native_files": [
+    "test_out\\DataProcessor\\native\\native_rust.rs"
+  ],
+  "orchestrator_file": "test_out\\DataProcessor\\DataProcessor.java",
+  "build_steps": [
+    {
+      "lang": "Rust",
+      "src": "test_out\\DataProcessor\\native\\native_rust.rs"
+    }
+  ],
+  "run_command": "test_out\\DataProcessor\\run.sh"
+}

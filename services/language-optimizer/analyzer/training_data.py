@@ -1,0 +1,12677 @@
+"""
+analyzer/training_data.py
+SLE'17 labeled training examples for CodeBERT classifier.
+Each example is a code snippet + its SLE'17 category + target language.
+"""
+
+# Format: (code_snippet, category, target_language, energy_saving_pct)
+TRAINING_EXAMPLES = [
+
+    # ── SORTING (C, ~52% saving) ──────────────────────────────────────────────
+    ("""
+void mergeSort(int* arr, int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+        mergeSort(arr, l, m);
+        mergeSort(arr, m + 1, r);
+        merge(arr, l, m, r);
+    }
+}
+""", "sorting", "C", 52),
+
+    ("""
+public double[] sortTransactionAmounts(double[] amounts) {
+    double[] result = amounts.clone();
+    mergeSort(result, 0, result.length - 1);
+    return result;
+}
+""", "sorting", "C", 52),
+
+    ("""
+def quicksort(arr):
+    if len(arr) <= 1:
+        return arr
+    pivot = arr[len(arr) // 2]
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quicksort(left) + middle + quicksort(right)
+""", "sorting", "C", 52),
+
+    ("""
+public int[] sortPrices(int[] prices) {
+    Arrays.sort(prices);
+    return prices;
+}
+""", "sorting", "C", 52),
+
+    ("""
+function sortByValue(items) {
+    return items.sort((a, b) => a.value - b.value);
+}
+""", "sorting", "C", 52),
+
+    ("""
+public List<Transaction> sortByAmount(List<Transaction> txns) {
+    return txns.stream()
+        .sorted(Comparator.comparing(Transaction::getAmount))
+        .collect(Collectors.toList());
+}
+""", "sorting", "C", 52),
+
+    # ── MONTE CARLO / NUMERIC SIMULATION (C, ~56% saving) ────────────────────
+    ("""
+public MonteCarloResult runMonteCarloSimulation(double portfolioValue,
+        double meanReturn, double volatility, int numSimulations, int horizonDays) {
+    Random rng = new Random(42);
+    double[] finalValues = new double[numSimulations];
+    double dt = 1.0 / 252.0;
+    for (int s = 0; s < numSimulations; s++) {
+        double value = portfolioValue;
+        for (int d = 0; d < horizonDays; d++) {
+            double z = rng.nextGaussian();
+            value *= Math.exp((meanReturn - 0.5 * volatility * volatility) * dt
+                    + volatility * Math.sqrt(dt) * z);
+        }
+        finalValues[s] = value;
+    }
+    return computeStats(finalValues, portfolioValue);
+}
+""", "monte_carlo", "C", 56),
+
+    ("""
+def simulate_portfolio(portfolio_value, mean_return, volatility, n_sims, horizon):
+    import numpy as np
+    dt = 1.0 / 252.0
+    final_values = np.zeros(n_sims)
+    for s in range(n_sims):
+        value = portfolio_value
+        for d in range(horizon):
+            z = np.random.standard_normal()
+            value *= np.exp((mean_return - 0.5 * volatility**2) * dt
+                           + volatility * np.sqrt(dt) * z)
+        final_values[s] = value
+    return final_values
+""", "monte_carlo", "C", 56),
+
+    ("""
+double runPricingSimulation(double S, double K, double r, double sigma,
+                             double T, int numPaths) {
+    double dt = T / 252.0;
+    double sum = 0.0;
+    for (int i = 0; i < numPaths; i++) {
+        double path = S;
+        for (int t = 0; t < 252; t++) {
+            double z = gaussianRandom();
+            path *= exp((r - 0.5*sigma*sigma)*dt + sigma*sqrt(dt)*z);
+        }
+        sum += fmax(path - K, 0.0);
+    }
+    return exp(-r * T) * sum / numPaths;
+}
+""", "monte_carlo", "C", 56),
+
+    ("""
+public double computeVaR(double[] returns, int simulations, double confidence) {
+    Random rng = new Random();
+    double[] simReturns = new double[simulations];
+    double mean = Arrays.stream(returns).average().orElse(0);
+    double std = computeStd(returns, mean);
+    for (int i = 0; i < simulations; i++) {
+        simReturns[i] = mean + std * rng.nextGaussian();
+    }
+    Arrays.sort(simReturns);
+    return simReturns[(int)((1 - confidence) * simulations)];
+}
+""", "monte_carlo", "C", 56),
+
+    # ── AMORTIZATION / NUMERIC ITERATION (C, ~52% saving) ────────────────────
+    ("""
+public List<AmortizationRow> computeAmortizationSchedule(
+        double principal, double annualRate, int termMonths) {
+    double monthlyRate = annualRate / 100.0 / 12.0;
+    double payment = principal * monthlyRate /
+            (1 - Math.pow(1 + monthlyRate, -termMonths));
+    List<AmortizationRow> schedule = new ArrayList<>();
+    double balance = principal;
+    for (int month = 1; month <= termMonths; month++) {
+        double interest = balance * monthlyRate;
+        double principalPaid = payment - interest;
+        balance -= principalPaid;
+        schedule.add(new AmortizationRow(month, payment, interest,
+                principalPaid, balance));
+    }
+    return schedule;
+}
+""", "amortization", "C", 52),
+
+    ("""
+def compute_loan_schedule(principal, annual_rate, months):
+    monthly_rate = annual_rate / 12 / 100
+    payment = principal * monthly_rate / (1 - (1 + monthly_rate) ** -months)
+    balance = principal
+    schedule = []
+    for month in range(1, months + 1):
+        interest = balance * monthly_rate
+        principal_paid = payment - interest
+        balance -= principal_paid
+        schedule.append((month, payment, interest, principal_paid, balance))
+    return schedule
+""", "amortization", "C", 52),
+
+    ("""
+public double[] computeDepreciation(double cost, double salvage,
+        int life, String method) {
+    double[] schedule = new double[life];
+    if (method.equals("straight-line")) {
+        double annual = (cost - salvage) / life;
+        Arrays.fill(schedule, annual);
+    } else if (method.equals("double-declining")) {
+        double rate = 2.0 / life;
+        double bookValue = cost;
+        for (int i = 0; i < life; i++) {
+            schedule[i] = bookValue * rate;
+            bookValue -= schedule[i];
+        }
+    }
+    return schedule;
+}
+""", "amortization", "C", 52),
+
+    # ── FRAUD / COMBINATORIAL SEARCH (C, ~58% saving) ─────────────────────────
+    ("""
+public FraudScore findFraudPatterns(double[] amounts, long[] timestamps,
+        String[] locations) {
+    int flags = 0;
+    double riskScore = 0.0;
+    // Velocity check
+    int rapidCount = 0;
+    for (int i = 0; i < timestamps.length; i++)
+        for (int j = i+1; j < timestamps.length; j++)
+            if (Math.abs(timestamps[i] - timestamps[j]) < 600000L) rapidCount++;
+    if (rapidCount > 3) { flags++; riskScore += 0.3; }
+    // Round number bias
+    int roundCount = 0;
+    for (double a : amounts) if (a % 100 == 0) roundCount++;
+    if (roundCount > amounts.length * 0.5) { flags++; riskScore += 0.2; }
+    return new FraudScore(riskScore, flags);
+}
+""", "combinatorial", "C", 58),
+
+    ("""
+def detect_anomalies(transactions, window_size=10):
+    anomalies = []
+    for i in range(len(transactions) - window_size):
+        window = transactions[i:i+window_size]
+        amounts = [t['amount'] for t in window]
+        mean = sum(amounts) / len(amounts)
+        std = (sum((x-mean)**2 for x in amounts) / len(amounts)) ** 0.5
+        for j, t in enumerate(window):
+            if abs(t['amount'] - mean) > 3 * std:
+                anomalies.append((i+j, t))
+    return anomalies
+""", "combinatorial", "C", 58),
+
+    ("""
+public int countPatternMatches(String[] sequences, String pattern) {
+    int count = 0;
+    for (String seq : sequences) {
+        for (int i = 0; i <= seq.length() - pattern.length(); i++) {
+            boolean match = true;
+            for (int j = 0; j < pattern.length(); j++) {
+                if (seq.charAt(i+j) != pattern.charAt(j)) {
+                    match = false; break;
+                }
+            }
+            if (match) count++;
+        }
+    }
+    return count;
+}
+""", "combinatorial", "C", 58),
+
+    # ── RISK SCORE / DEEP RECURSION (C++, ~40% saving) ───────────────────────
+    ("""
+public double computeRiskScore(double[] factors, double[] weights, int depth) {
+    return recursiveScore(factors, weights, 0, factors.length, depth);
+}
+private double recursiveScore(double[] f, double[] w, int start, int end, int depth) {
+    if (depth == 0 || end - start <= 1) {
+        double sum = 0;
+        for (int i = start; i < end; i++) sum += f[i] * w[i];
+        return sum;
+    }
+    int mid = start + (end - start) / 2;
+    double left = recursiveScore(f, w, start, mid, depth - 1);
+    double right = recursiveScore(f, w, mid, end, depth - 1);
+    return (left + right) / 2.0;
+}
+""", "recursion_deep", "C++", 40),
+
+    ("""
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+""", "recursion_deep", "C++", 40),
+
+    ("""
+public int ackermann(int m, int n) {
+    if (m == 0) return n + 1;
+    if (n == 0) return ackermann(m - 1, 1);
+    return ackermann(m - 1, ackermann(m, n - 1));
+}
+""", "recursion_deep", "C++", 40),
+
+    ("""
+int treeDepth(TreeNode* root) {
+    if (root == null) return 0;
+    return 1 + max(treeDepth(root->left), treeDepth(root->right));
+}
+""", "recursion_deep", "C++", 40),
+
+    # ── MATRIX / SPECTRAL NORM (C, ~56% saving) ───────────────────────────────
+    ("""
+public double[][] multiplyMatrices(double[][] a, double[][] b) {
+    int n = a.length, m = b[0].length, k = b.length;
+    double[][] result = new double[n][m];
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++)
+            for (int l = 0; l < k; l++)
+                result[i][j] += a[i][l] * b[l][j];
+    return result;
+}
+""", "matrix", "C", 56),
+
+    ("""
+def spectral_norm(matrix, iterations=10):
+    import math
+    n = len(matrix)
+    u = [1.0] * n
+    for _ in range(iterations):
+        v = [sum(matrix[i][j] * u[j] for j in range(n)) for i in range(n)]
+        u = [sum(matrix[j][i] * v[j] for j in range(n)) for i in range(n)]
+    norm = math.sqrt(sum(x*y for x,y in zip(u,v)) / sum(x*x for x in v))
+    return norm
+""", "matrix", "C", 56),
+
+    # ── I/O HEAVY (keep, JavaScript better) ───────────────────────────────────
+    ("""
+public String readAndProcessFile(String path) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
+        String line;
+        while ((line = reader.readLine()) != null) {
+            sb.append(line.trim()).append("\\n");
+        }
+    }
+    return sb.toString();
+}
+""", "io", "keep", 0),
+
+    ("""
+async function fetchAndProcess(url) {
+    const response = await fetch(url);
+    const data = await response.json();
+    return data.map(item => ({
+        id: item.id,
+        value: item.value * 1.1
+    }));
+}
+""", "io", "keep", 0),
+
+    ("""
+def read_csv_data(filepath):
+    import csv
+    rows = []
+    with open(filepath, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows.append(row)
+    return rows
+""", "io", "keep", 0),
+
+    # ── ORCHESTRATION (keep) ──────────────────────────────────────────────────
+    ("""
+public static void main(String[] args) {
+    AccountService svc = new AccountService();
+    List<Account> accounts = svc.getAllAccounts();
+    for (Account a : accounts) {
+        double risk = svc.computeRisk(a);
+        svc.updateRiskScore(a.getId(), risk);
+    }
+}
+""", "orchestration", "keep", 0),
+
+    ("""
+def process_pipeline(data):
+    cleaned = clean_data(data)
+    features = extract_features(cleaned)
+    predictions = model.predict(features)
+    results = format_results(predictions)
+    save_results(results)
+    return results
+""", "orchestration", "keep", 0),
+
+    ("""
+@RestController
+public class AccountController {
+    @GetMapping("/accounts/{id}/risk")
+    public ResponseEntity<RiskScore> getRisk(@PathVariable Long id) {
+        return ResponseEntity.ok(accountService.computeRisk(id));
+    }
+}
+""", "orchestration", "keep", 0),
+
+    # ── TRIVIAL (keep) ────────────────────────────────────────────────────────
+    ("""
+public String getAccountNumber() {
+    return accountNumber;
+}
+""", "trivial", "keep", 0),
+
+    ("""
+def format_currency(amount):
+    return f"${amount:.2f}"
+""", "trivial", "keep", 0),
+
+    ("""
+public boolean isActive() {
+    return status == Status.ACTIVE;
+}
+""", "trivial", "keep", 0),
+
+    # ── HASH MAP / K-NUCLEOTIDE (C, ~58% saving) ──────────────────────────────
+    ("""
+public Map<String, Integer> countWordFrequency(String[] words) {
+    Map<String, Integer> freq = new HashMap<>();
+    for (String word : words) {
+        freq.merge(word.toLowerCase(), 1, Integer::sum);
+    }
+    return freq;
+}
+""", "hash_set", "C", 58),
+
+    ("""
+def count_kmers(sequence, k):
+    counts = {}
+    for i in range(len(sequence) - k + 1):
+        kmer = sequence[i:i+k]
+        counts[kmer] = counts.get(kmer, 0) + 1
+    return counts
+""", "hash_set", "C", 58),
+
+    # ── N-BODY / PHYSICS (C, ~56% saving) ────────────────────────────────────
+    ("""
+public void updatePositions(double[] x, double[] y, double[] z,
+        double[] vx, double[] vy, double[] vz, double[] mass, double dt) {
+    int n = x.length;
+    for (int i = 0; i < n; i++) {
+        for (int j = i+1; j < n; j++) {
+            double dx = x[j] - x[i];
+            double dy = y[j] - y[i];
+            double dz = z[j] - z[i];
+            double dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            double force = mass[i] * mass[j] / (dist * dist * dist);
+            vx[i] += force * dx * dt;
+            vy[i] += force * dy * dt;
+        }
+    }
+    for (int i = 0; i < n; i++) {
+        x[i] += vx[i] * dt;
+        y[i] += vy[i] * dt;
+        z[i] += vz[i] * dt;
+    }
+}
+""", "nbody", "C", 56),
+]
+
+# Category → target language mapping (for classifier output)
+CATEGORY_TO_TARGET = {
+    "sorting":       "C",
+    "monte_carlo":   "C",
+    "amortization":  "C",
+    "combinatorial": "C",
+    "recursion_deep":"C++",
+    "matrix":        "C",
+    "hash_set":      "Rust",
+    "nbody":         "C",
+    "io":            "keep",
+    "orchestration": "keep",
+    "trivial":       "keep",
+    "fasta":         "C",
+}
+
+# SLE'17 energy savings per category
+CATEGORY_SAVINGS = {
+    "sorting":       52,
+    "monte_carlo":   56,
+    "amortization":  52,
+    "combinatorial": 58,
+    "recursion_deep":40,
+    "matrix":        56,
+    "hash_set":      58,
+    "nbody":         56,
+    "io":            0,
+    "orchestration": 0,
+    "trivial":       0,
+    "fasta":         55,
+}
+
+ALL_CATEGORIES = list(CATEGORY_TO_TARGET.keys())
+
+# ── ADDITIONAL TRAINING EXAMPLES ─────────────────────────────────────────────
+# Added to bring each category to 10-15 examples for reliable SVM training
+
+EXTRA_TRAINING_EXAMPLES = [
+
+    # ── SORTING (need 9 more) ─────────────────────────────────────────────────
+    ("""
+public int[] heapSort(int[] arr) {
+    int n = arr.length;
+    for (int i = n/2 - 1; i >= 0; i--) heapify(arr, n, i);
+    for (int i = n-1; i > 0; i--) {
+        int temp = arr[0]; arr[0] = arr[i]; arr[i] = temp;
+        heapify(arr, i, 0);
+    }
+    return arr;
+}
+""", "sorting", "C", 52),
+
+    ("""
+def insertion_sort(arr):
+    for i in range(1, len(arr)):
+        key = arr[i]
+        j = i - 1
+        while j >= 0 and arr[j] > key:
+            arr[j+1] = arr[j]
+            j -= 1
+        arr[j+1] = key
+    return arr
+""", "sorting", "C", 52),
+
+    ("""
+void bubbleSort(double* arr, int n) {
+    for (int i = 0; i < n-1; i++)
+        for (int j = 0; j < n-i-1; j++)
+            if (arr[j] > arr[j+1]) {
+                double t = arr[j]; arr[j] = arr[j+1]; arr[j+1] = t;
+            }
+}
+""", "sorting", "C", 52),
+
+    ("""
+public List<Integer> sortByFrequency(int[] nums) {
+    Map<Integer, Integer> freq = new HashMap<>();
+    for (int n : nums) freq.merge(n, 1, Integer::sum);
+    return Arrays.stream(nums).boxed()
+        .sorted((a, b) -> freq.get(b) - freq.get(a))
+        .collect(Collectors.toList());
+}
+""", "sorting", "C", 52),
+
+    ("""
+function radixSort(arr) {
+    const max = Math.max(...arr);
+    for (let exp = 1; Math.floor(max/exp) > 0; exp *= 10) {
+        countingSort(arr, exp);
+    }
+    return arr;
+}
+""", "sorting", "C", 52),
+
+    ("""
+public double[] sortPrices(double[] prices) {
+    double[] sorted = prices.clone();
+    Arrays.sort(sorted);
+    return sorted;
+}
+""", "sorting", "C", 52),
+
+    ("""
+int partition(int arr[], int low, int high) {
+    int pivot = arr[high];
+    int i = low - 1;
+    for (int j = low; j < high; j++)
+        if (arr[j] <= pivot) { i++; int t=arr[i]; arr[i]=arr[j]; arr[j]=t; }
+    int t=arr[i+1]; arr[i+1]=arr[high]; arr[high]=t;
+    return i+1;
+}
+""", "sorting", "C", 52),
+
+    ("""
+def merge_sort(arr):
+    if len(arr) <= 1: return arr
+    mid = len(arr) // 2
+    left  = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
+    return merge(left, right)
+""", "sorting", "C", 52),
+
+    ("""
+public void sortTransactions(Transaction[] txns) {
+    Arrays.sort(txns, Comparator.comparing(Transaction::getAmount)
+        .thenComparing(Transaction::getDate));
+}
+""", "sorting", "C", 52),
+
+    # ── MONTE CARLO (need 8 more) ─────────────────────────────────────────────
+    ("""
+public double blackScholesMonteCarlo(double S, double K, double r,
+        double sigma, double T, int paths) {
+    double dt = T / 252;
+    double sum = 0;
+    Random rng = new Random();
+    for (int i = 0; i < paths; i++) {
+        double price = S;
+        for (int t = 0; t < 252; t++)
+            price *= Math.exp((r - 0.5*sigma*sigma)*dt + sigma*Math.sqrt(dt)*rng.nextGaussian());
+        sum += Math.max(price - K, 0);
+    }
+    return Math.exp(-r * T) * sum / paths;
+}
+""", "monte_carlo", "C", 56),
+
+    ("""
+def estimate_pi(num_samples):
+    import random
+    inside = 0
+    for _ in range(num_samples):
+        x, y = random.random(), random.random()
+        if x*x + y*y <= 1:
+            inside += 1
+    return 4 * inside / num_samples
+""", "monte_carlo", "C", 56),
+
+    ("""
+double simulateGBM(double S0, double mu, double sigma, int steps, int paths) {
+    double dt = 1.0 / steps;
+    double total = 0;
+    for (int p = 0; p < paths; p++) {
+        double S = S0;
+        for (int t = 0; t < steps; t++) {
+            double z = gaussianRandom();
+            S *= exp((mu - 0.5*sigma*sigma)*dt + sigma*sqrt(dt)*z);
+        }
+        total += S;
+    }
+    return total / paths;
+}
+""", "monte_carlo", "C", 56),
+
+    ("""
+public double[] runStressTest(double portfolioValue, int scenarios, int horizon) {
+    double[] results = new double[scenarios];
+    Random rng = new Random(42);
+    for (int s = 0; s < scenarios; s++) {
+        double value = portfolioValue;
+        for (int d = 0; d < horizon; d++) {
+            double shock = rng.nextGaussian() * 0.02;
+            value *= (1 + shock);
+        }
+        results[s] = value;
+    }
+    Arrays.sort(results);
+    return results;
+}
+""", "monte_carlo", "C", 56),
+
+    ("""
+def monte_carlo_integration(f, a, b, n_samples):
+    import random
+    total = sum(f(random.uniform(a, b)) for _ in range(n_samples))
+    return (b - a) * total / n_samples
+""", "monte_carlo", "C", 56),
+
+    ("""
+public double computeCVaR(double portfolioValue, double vol,
+        int simulations, double confidence) {
+    double[] losses = new double[simulations];
+    Random rng = new Random();
+    for (int i = 0; i < simulations; i++) {
+        double shock = rng.nextGaussian() * vol;
+        losses[i] = portfolioValue * Math.max(-shock, 0);
+    }
+    Arrays.sort(losses);
+    int cutoff = (int)(simulations * (1 - confidence));
+    double sum = 0;
+    for (int i = cutoff; i < simulations; i++) sum += losses[i];
+    return sum / (simulations - cutoff);
+}
+""", "monte_carlo", "C", 56),
+
+    ("""
+void simulateBrownianMotion(double* path, int steps, double dt,
+        double mu, double sigma) {
+    path[0] = 0;
+    for (int i = 1; i < steps; i++)
+        path[i] = path[i-1] + mu*dt + sigma*sqrt(dt)*gaussianRandom();
+}
+""", "monte_carlo", "C", 56),
+
+    ("""
+public double[] runMarketSimulation(int numAssets, int numDays, int scenarios) {
+    double[] finalPrices = new double[scenarios];
+    Random rng = new Random();
+    for (int s = 0; s < scenarios; s++) {
+        double price = 100.0;
+        for (int d = 0; d < numDays; d++)
+            price *= Math.exp(0.0001 + 0.01 * rng.nextGaussian());
+        finalPrices[s] = price;
+    }
+    return finalPrices;
+}
+""", "monte_carlo", "C", 56),
+
+    # ── AMORTIZATION (need 8 more) ────────────────────────────────────────────
+    ("""
+public double computeMonthlyPayment(double principal, double annualRate, int months) {
+    double r = annualRate / 12 / 100;
+    return principal * r / (1 - Math.pow(1 + r, -months));
+}
+""", "amortization", "C", 52),
+
+    ("""
+def calculate_bond_price(face_value, coupon_rate, yield_rate, periods):
+    coupon = face_value * coupon_rate / 2
+    price = 0
+    for t in range(1, periods + 1):
+        price += coupon / (1 + yield_rate/2) ** t
+    price += face_value / (1 + yield_rate/2) ** periods
+    return price
+""", "amortization", "C", 52),
+
+    ("""
+double[] computeNPV(double* cashflows, int n, double rate) {
+    double npv = cashflows[0];
+    for (int t = 1; t < n; t++)
+        npv += cashflows[t] / pow(1 + rate, t);
+    return npv;
+}
+""", "amortization", "C", 52),
+
+    ("""
+public double computeIRR(double[] cashflows, double guess) {
+    double rate = guess;
+    for (int iter = 0; iter < 1000; iter++) {
+        double npv = 0, dnpv = 0;
+        for (int t = 0; t < cashflows.length; t++) {
+            npv  += cashflows[t] / Math.pow(1 + rate, t);
+            dnpv -= t * cashflows[t] / Math.pow(1 + rate, t + 1);
+        }
+        rate -= npv / dnpv;
+        if (Math.abs(npv) < 1e-6) break;
+    }
+    return rate;
+}
+""", "amortization", "C", 52),
+
+    ("""
+def compute_future_value(pv, rate, periods):
+    schedule = []
+    balance = pv
+    for t in range(1, periods + 1):
+        interest = balance * rate
+        balance = balance + interest
+        schedule.append((t, interest, balance))
+    return schedule
+""", "amortization", "C", 52),
+
+    ("""
+public List<Double> computeDepreciationSchedule(double cost,
+        double salvage, int years) {
+    List<Double> schedule = new ArrayList<>();
+    double bookValue = cost;
+    double rate = 2.0 / years;
+    for (int y = 0; y < years; y++) {
+        double dep = Math.min(bookValue * rate, bookValue - salvage);
+        schedule.add(dep);
+        bookValue -= dep;
+    }
+    return schedule;
+}
+""", "amortization", "C", 52),
+
+    ("""
+double computeYield(double price, double face, double coupon, int periods) {
+    double yield = coupon / price;
+    for (int i = 0; i < 100; i++) {
+        double pv = 0;
+        for (int t = 1; t <= periods; t++)
+            pv += coupon / pow(1+yield, t);
+        pv += face / pow(1+yield, periods);
+        yield += (pv - price) / (periods * face);
+    }
+    return yield;
+}
+""", "amortization", "C", 52),
+
+    ("""
+public double[] computeEAR(double[] nominalRates, int[] compoundingPeriods) {
+    double[] ear = new double[nominalRates.length];
+    for (int i = 0; i < nominalRates.length; i++) {
+        double r = nominalRates[i] / compoundingPeriods[i];
+        ear[i] = Math.pow(1 + r, compoundingPeriods[i]) - 1;
+    }
+    return ear;
+}
+""", "amortization", "C", 52),
+
+    # ── COMBINATORIAL (need 8 more) ───────────────────────────────────────────
+    ("""
+public int knapsack(int[] weights, int[] values, int capacity) {
+    int n = weights.length;
+    int[][] dp = new int[n+1][capacity+1];
+    for (int i = 1; i <= n; i++)
+        for (int w = 0; w <= capacity; w++) {
+            dp[i][w] = dp[i-1][w];
+            if (weights[i-1] <= w)
+                dp[i][w] = Math.max(dp[i][w], dp[i-1][w-weights[i-1]] + values[i-1]);
+        }
+    return dp[n][capacity];
+}
+""", "combinatorial", "C", 58),
+
+    ("""
+def count_combinations(n, k):
+    if k > n: return 0
+    if k == 0 or k == n: return 1
+    total = 0
+    combo = [0] * (k+1)
+    combo[0] = 1
+    for i in range(1, n+1):
+        for j in range(min(i, k), 0, -1):
+            combo[j] += combo[j-1]
+    return combo[k]
+""", "combinatorial", "C", 58),
+
+    ("""
+public boolean hasDuplicateWithinK(int[] nums, int k) {
+    Set<Integer> window = new HashSet<>();
+    for (int i = 0; i < nums.length; i++) {
+        if (!window.add(nums[i])) return true;
+        if (window.size() > k) window.remove(nums[i-k]);
+    }
+    return false;
+}
+""", "combinatorial", "C", 58),
+
+    ("""
+int countSubsetSum(int* arr, int n, int target) {
+    int count = 0;
+    for (int mask = 0; mask < (1 << n); mask++) {
+        int sum = 0;
+        for (int i = 0; i < n; i++)
+            if (mask & (1 << i)) sum += arr[i];
+        if (sum == target) count++;
+    }
+    return count;
+}
+""", "combinatorial", "C", 58),
+
+    ("""
+public List<List<Integer>> generatePermutations(int[] nums) {
+    List<List<Integer>> result = new ArrayList<>();
+    permute(nums, 0, result);
+    return result;
+}
+private void permute(int[] nums, int start, List<List<Integer>> result) {
+    if (start == nums.length) {
+        result.add(Arrays.stream(nums).boxed().collect(Collectors.toList()));
+        return;
+    }
+    for (int i = start; i < nums.length; i++) {
+        int tmp = nums[start]; nums[start] = nums[i]; nums[i] = tmp;
+        permute(nums, start+1, result);
+        tmp = nums[start]; nums[start] = nums[i]; nums[i] = tmp;
+    }
+}
+""", "combinatorial", "C", 58),
+
+    ("""
+def detect_velocity_fraud(transactions, window_ms=600000, threshold=3):
+    flags = []
+    for i in range(len(transactions)):
+        count = sum(1 for j in range(len(transactions))
+                   if i != j and abs(transactions[i]['ts'] - transactions[j]['ts']) < window_ms)
+        if count >= threshold:
+            flags.append(transactions[i])
+    return flags
+""", "combinatorial", "C", 58),
+
+    ("""
+public int longestIncreasingSubsequence(int[] nums) {
+    int[] dp = new int[nums.length];
+    Arrays.fill(dp, 1);
+    int max = 1;
+    for (int i = 1; i < nums.length; i++) {
+        for (int j = 0; j < i; j++)
+            if (nums[j] < nums[i]) dp[i] = Math.max(dp[i], dp[j]+1);
+        max = Math.max(max, dp[i]);
+    }
+    return max;
+}
+""", "combinatorial", "C", 58),
+
+    ("""
+int editDistance(char* s1, char* s2, int m, int n) {
+    int dp[m+1][n+1];
+    for (int i = 0; i <= m; i++) dp[i][0] = i;
+    for (int j = 0; j <= n; j++) dp[0][j] = j;
+    for (int i = 1; i <= m; i++)
+        for (int j = 1; j <= n; j++)
+            dp[i][j] = s1[i-1]==s2[j-1] ? dp[i-1][j-1] :
+                1 + fmin(dp[i-1][j], fmin(dp[i][j-1], dp[i-1][j-1]));
+    return dp[m][n];
+}
+""", "combinatorial", "C", 58),
+
+    # ── RECURSION_DEEP (need 7 more) ──────────────────────────────────────────
+    ("""
+public int hanoi(int n, char from, char to, char via) {
+    if (n == 1) { move(from, to); return 1; }
+    int moves = hanoi(n-1, from, via, to);
+    move(from, to);
+    return moves + 1 + hanoi(n-1, via, to, from);
+}
+""", "recursion_deep", "C++", 40),
+
+    ("""
+def flatten(lst):
+    result = []
+    for item in lst:
+        if isinstance(item, list):
+            result.extend(flatten(item))
+        else:
+            result.append(item)
+    return result
+""", "recursion_deep", "C++", 40),
+
+    ("""
+public long countPaths(int m, int n) {
+    if (m == 1 || n == 1) return 1;
+    return countPaths(m-1, n) + countPaths(m, n-1);
+}
+""", "recursion_deep", "C++", 40),
+
+    ("""
+int floodFill(int[][] grid, int r, int c, int oldColor, int newColor) {
+    if (r<0||r>=grid.length||c<0||c>=grid[0].length) return 0;
+    if (grid[r][c] != oldColor) return 0;
+    grid[r][c] = newColor;
+    return 1 + floodFill(grid,r+1,c,oldColor,newColor)
+             + floodFill(grid,r-1,c,oldColor,newColor)
+             + floodFill(grid,r,c+1,oldColor,newColor)
+             + floodFill(grid,r,c-1,oldColor,newColor);
+}
+""", "recursion_deep", "C++", 40),
+
+    ("""
+def power(base, exp):
+    if exp == 0: return 1
+    if exp % 2 == 0:
+        half = power(base, exp // 2)
+        return half * half
+    return base * power(base, exp - 1)
+""", "recursion_deep", "C++", 40),
+
+    ("""
+public int mergeCount(int[] arr, int l, int r) {
+    if (l >= r) return 0;
+    int mid = (l + r) / 2;
+    int count = mergeCount(arr, l, mid) + mergeCount(arr, mid+1, r);
+    count += mergeAndCount(arr, l, mid, r);
+    return count;
+}
+""", "recursion_deep", "C++", 40),
+
+    ("""
+int gcd(int a, int b) {
+    if (b == 0) return a;
+    return gcd(b, a % b);
+}
+""", "recursion_deep", "C++", 40),
+
+    # ── MATRIX (need 8 more) ──────────────────────────────────────────────────
+    ("""
+public double[][] transposeMatrix(double[][] m) {
+    int rows = m.length, cols = m[0].length;
+    double[][] t = new double[cols][rows];
+    for (int i = 0; i < rows; i++)
+        for (int j = 0; j < cols; j++)
+            t[j][i] = m[i][j];
+    return t;
+}
+""", "matrix", "C", 56),
+
+    ("""
+def lu_decomposition(A):
+    n = len(A)
+    L = [[0.0]*n for _ in range(n)]
+    U = [row[:] for row in A]
+    for i in range(n):
+        L[i][i] = 1.0
+        for j in range(i+1, n):
+            factor = U[j][i] / U[i][i]
+            L[j][i] = factor
+            for k in range(i, n):
+                U[j][k] -= factor * U[i][k]
+    return L, U
+""", "matrix", "C", 56),
+
+    ("""
+void matVecMul(double* A, double* x, double* y, int n) {
+    for (int i = 0; i < n; i++) {
+        y[i] = 0;
+        for (int j = 0; j < n; j++)
+            y[i] += A[i*n + j] * x[j];
+    }
+}
+""", "matrix", "C", 56),
+
+    ("""
+public double computeDeterminant(double[][] m) {
+    int n = m.length;
+    if (n == 1) return m[0][0];
+    if (n == 2) return m[0][0]*m[1][1] - m[0][1]*m[1][0];
+    double det = 0;
+    for (int j = 0; j < n; j++)
+        det += (j%2==0?1:-1) * m[0][j] * computeDeterminant(minor(m,0,j));
+    return det;
+}
+""", "matrix", "C", 56),
+
+    ("""
+def power_iteration(A, num_iterations=100):
+    n = len(A)
+    b = [1.0/n] * n
+    for _ in range(num_iterations):
+        b_new = [sum(A[i][j]*b[j] for j in range(n)) for i in range(n)]
+        norm = sum(x*x for x in b_new) ** 0.5
+        b = [x/norm for x in b_new]
+    return b
+""", "matrix", "C", 56),
+
+    ("""
+double frobeniusNorm(double** A, int m, int n) {
+    double sum = 0;
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            sum += A[i][j] * A[i][j];
+    return sqrt(sum);
+}
+""", "matrix", "C", 56),
+
+    ("""
+public double[][] computeCovariance(double[][] data) {
+    int n = data.length, m = data[0].length;
+    double[] mean = new double[m];
+    for (double[] row : data)
+        for (int j = 0; j < m; j++) mean[j] += row[j] / n;
+    double[][] cov = new double[m][m];
+    for (double[] row : data)
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < m; j++)
+                cov[i][j] += (row[i]-mean[i])*(row[j]-mean[j]) / (n-1);
+    return cov;
+}
+""", "matrix", "C", 56),
+
+    ("""
+void gaussianElimination(double** A, double* b, int n) {
+    for (int i = 0; i < n; i++) {
+        for (int j = i+1; j < n; j++) {
+            double factor = A[j][i] / A[i][i];
+            for (int k = i; k < n; k++) A[j][k] -= factor * A[i][k];
+            b[j] -= factor * b[i];
+        }
+    }
+}
+""", "matrix", "C", 56),
+
+    # ── HASH_SET (need 8 more) ────────────────────────────────────────────────
+    ("""
+public Map<String, Long> groupByCategory(List<Transaction> txns) {
+    return txns.stream()
+        .collect(Collectors.groupingBy(Transaction::getCategory,
+                 Collectors.summingLong(Transaction::getAmount)));
+}
+""", "hash_set", "C", 58),
+
+    ("""
+def count_unique_words(text):
+    word_count = {}
+    for word in text.lower().split():
+        word = word.strip('.,!?;:')
+        word_count[word] = word_count.get(word, 0) + 1
+    return word_count
+""", "hash_set", "C", 58),
+
+    ("""
+int countDistinctSubstrings(char* s, int k) {
+    int count = 0;
+    int n = strlen(s);
+    for (int i = 0; i <= n-k; i++) {
+        char sub[k+1];
+        strncpy(sub, s+i, k); sub[k] = 0;
+        if (!inHashSet(sub)) { addToHashSet(sub); count++; }
+    }
+    return count;
+}
+""", "hash_set", "C", 58),
+
+    ("""
+public List<Integer> findDuplicates(int[] nums) {
+    Set<Integer> seen = new HashSet<>();
+    List<Integer> dups = new ArrayList<>();
+    for (int n : nums)
+        if (!seen.add(n)) dups.add(n);
+    return dups;
+}
+""", "hash_set", "C", 58),
+
+    ("""
+def find_anagram_groups(words):
+    groups = {}
+    for word in words:
+        key = ''.join(sorted(word))
+        groups.setdefault(key, []).append(word)
+    return [g for g in groups.values() if len(g) > 1]
+""", "hash_set", "C", 58),
+
+    ("""
+public boolean containsNearbyAlmostDuplicate(int[] nums, int k, int t) {
+    TreeMap<Long, Long> window = new TreeMap<>();
+    for (int i = 0; i < nums.length; i++) {
+        Long floor = window.floorKey((long)nums[i]);
+        if (floor != null && nums[i] - floor <= t) return true;
+        Long ceil = window.ceilingKey((long)nums[i]);
+        if (ceil != null && ceil - nums[i] <= t) return true;
+        window.put((long)nums[i], (long)nums[i]);
+        if (i >= k) window.remove((long)nums[i-k]);
+    }
+    return false;
+}
+""", "hash_set", "C", 58),
+
+    ("""
+def top_k_frequent(nums, k):
+    freq = {}
+    for n in nums: freq[n] = freq.get(n, 0) + 1
+    return sorted(freq, key=freq.get, reverse=True)[:k]
+""", "hash_set", "C", 58),
+
+    ("""
+public int longestConsecutiveSequence(int[] nums) {
+    Set<Integer> set = new HashSet<>();
+    for (int n : nums) set.add(n);
+    int longest = 0;
+    for (int n : set) {
+        if (!set.contains(n-1)) {
+            int len = 1;
+            while (set.contains(n+len)) len++;
+            longest = Math.max(longest, len);
+        }
+    }
+    return longest;
+}
+""", "hash_set", "C", 58),
+
+    # ── IO (need 7 more) ──────────────────────────────────────────────────────
+    ("""
+public Response callExternalApi(String endpoint, Map<String,String> params) {
+    HttpClient client = HttpClient.newHttpClient();
+    String url = buildUrl(endpoint, params);
+    HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
+    return client.send(req, HttpResponse.BodyHandlers.ofString());
+}
+""", "io", "keep", 0),
+
+    ("""
+async def stream_data(url, callback):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            async for chunk in resp.content.iter_chunked(1024):
+                await callback(chunk)
+""", "io", "keep", 0),
+
+    ("""
+public void writeResultsToDatabase(List<Result> results) {
+    try (Connection conn = dataSource.getConnection();
+         PreparedStatement ps = conn.prepareStatement(INSERT_SQL)) {
+        for (Result r : results) {
+            ps.setString(1, r.getId());
+            ps.setDouble(2, r.getValue());
+            ps.addBatch();
+        }
+        ps.executeBatch();
+    }
+}
+""", "io", "keep", 0),
+
+    ("""
+def parse_config_file(filepath):
+    import json
+    with open(filepath, 'r') as f:
+        config = json.load(f)
+    return config
+""", "io", "keep", 0),
+
+    ("""
+public List<String> readLinesFromFile(Path path) throws IOException {
+    return Files.readAllLines(path, StandardCharsets.UTF_8);
+}
+""", "io", "keep", 0),
+
+    ("""
+function saveToLocalStorage(key, data) {
+    localStorage.setItem(key, JSON.stringify(data));
+    console.log(`Saved ${key} to storage`);
+}
+""", "io", "keep", 0),
+
+    ("""
+public void sendEmail(String to, String subject, String body) {
+    MimeMessage msg = mailSender.createMimeMessage();
+    MimeMessageHelper helper = new MimeMessageHelper(msg);
+    helper.setTo(to);
+    helper.setSubject(subject);
+    helper.setText(body, true);
+    mailSender.send(msg);
+}
+""", "io", "keep", 0),
+
+    # ── ORCHESTRATION (need 7 more) ───────────────────────────────────────────
+    ("""
+@Service
+public class AccountService {
+    public AccountSummary getAccountSummary(Long accountId) {
+        Account account = accountRepository.findById(accountId).orElseThrow();
+        List<Transaction> txns = transactionService.getRecent(accountId, 30);
+        RiskScore risk = riskService.compute(accountId);
+        return AccountSummary.of(account, txns, risk);
+    }
+}
+""", "orchestration", "keep", 0),
+
+    ("""
+def run_etl_pipeline(source, destination):
+    raw_data     = extract(source)
+    cleaned_data = transform(raw_data)
+    load(cleaned_data, destination)
+    log_stats(raw_data, cleaned_data)
+""", "orchestration", "keep", 0),
+
+    ("""
+public void processOrder(Order order) {
+    validateOrder(order);
+    reserveInventory(order);
+    chargePayment(order);
+    scheduleDelivery(order);
+    sendConfirmation(order);
+    publishEvent(new OrderProcessedEvent(order));
+}
+""", "orchestration", "keep", 0),
+
+    ("""
+@Scheduled(cron = "0 0 2 * * ?")
+public void runNightlyBatch() {
+    List<Account> accounts = accountService.findActive();
+    for (Account a : accounts) {
+        riskService.recalculate(a.getId());
+        fraudService.scan(a.getId());
+        reportingService.update(a.getId());
+    }
+}
+""", "orchestration", "keep", 0),
+
+    ("""
+def coordinate_microservices(request):
+    user    = user_service.get(request.user_id)
+    account = account_service.get(request.account_id)
+    txns    = transaction_service.list(account.id, limit=100)
+    risk    = risk_service.compute(user, account, txns)
+    return build_response(user, account, txns, risk)
+""", "orchestration", "keep", 0),
+
+    ("""
+public CompletableFuture<Report> generateReport(ReportRequest req) {
+    return CompletableFuture.supplyAsync(() -> {
+        List<Data> data = dataService.fetch(req.getDateRange());
+        Analysis analysis = analyzerService.analyze(data);
+        return reportBuilder.build(analysis, req.getFormat());
+    });
+}
+""", "orchestration", "keep", 0),
+
+    ("""
+class DataPipeline:
+    def __init__(self, steps):
+        self.steps = steps
+    def run(self, data):
+        result = data
+        for step in self.steps:
+            result = step.process(result)
+        return result
+""", "orchestration", "keep", 0),
+
+    # ── TRIVIAL (need 7 more) ─────────────────────────────────────────────────
+    ("""
+public String getFullName() {
+    return firstName + " " + lastName;
+}
+""", "trivial", "keep", 0),
+
+    ("""
+def is_valid_email(email):
+    return '@' in email and '.' in email
+""", "trivial", "keep", 0),
+
+    ("""
+public void setStatus(Status status) {
+    this.status = status;
+}
+""", "trivial", "keep", 0),
+
+    ("""
+public int getAge() {
+    return Period.between(birthDate, LocalDate.now()).getYears();
+}
+""", "trivial", "keep", 0),
+
+    ("""
+function formatCurrency(amount, currency = 'USD') {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+}
+""", "trivial", "keep", 0),
+
+    ("""
+public boolean isEmpty() {
+    return items == null || items.isEmpty();
+}
+""", "trivial", "keep", 0),
+
+    ("""
+def to_dict(self):
+    return {'id': self.id, 'name': self.name, 'value': self.value}
+""", "trivial", "keep", 0),
+
+    # ── NBODY (need 8 more) ───────────────────────────────────────────────────
+    ("""
+def simulate_gravity(bodies, dt):
+    for i in range(len(bodies)):
+        for j in range(i+1, len(bodies)):
+            dx = bodies[j].x - bodies[i].x
+            dy = bodies[j].y - bodies[i].y
+            dist = (dx*dx + dy*dy) ** 0.5
+            force = bodies[i].mass * bodies[j].mass / (dist*dist)
+            ax = force * dx / (dist * bodies[i].mass)
+            bodies[i].vx += ax * dt
+            bodies[i].vy += force * dy / (dist * bodies[i].mass) * dt
+""", "nbody", "C", 56),
+
+    ("""
+void computeForces(double* px, double* py, double* mass,
+                   double* fx, double* fy, int n) {
+    for (int i = 0; i < n; i++) {
+        fx[i] = fy[i] = 0;
+        for (int j = 0; j < n; j++) {
+            if (i==j) continue;
+            double dx = px[j]-px[i], dy = py[j]-py[i];
+            double r = sqrt(dx*dx + dy*dy) + 1e-10;
+            double f = mass[i]*mass[j]/(r*r*r);
+            fx[i] += f*dx; fy[i] += f*dy;
+        }
+    }
+}
+""", "nbody", "C", 56),
+
+    ("""
+public void stepSimulation(double[] x, double[] y, double[] vx,
+        double[] vy, double[] mass, double dt) {
+    int n = x.length;
+    double[] fx = new double[n], fy = new double[n];
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++) {
+            if (i==j) continue;
+            double dx = x[j]-x[i], dy = y[j]-y[i];
+            double r = Math.sqrt(dx*dx+dy*dy);
+            double f = mass[i]*mass[j]/(r*r*r);
+            fx[i]+=f*dx; fy[i]+=f*dy;
+        }
+    for (int i = 0; i < n; i++) {
+        vx[i]+=fx[i]/mass[i]*dt; vy[i]+=fy[i]/mass[i]*dt;
+        x[i]+=vx[i]*dt; y[i]+=vy[i]*dt;
+    }
+}
+""", "nbody", "C", 56),
+
+    ("""
+def leapfrog_step(pos, vel, acc, dt):
+    pos_new = [p + v*dt + 0.5*a*dt*dt for p,v,a in zip(pos,vel,acc)]
+    acc_new = compute_accelerations(pos_new)
+    vel_new = [v + 0.5*(a+a2)*dt for v,a,a2 in zip(vel,acc,acc_new)]
+    return pos_new, vel_new, acc_new
+""", "nbody", "C", 56),
+
+    ("""
+double totalEnergy(double* x, double* y, double* vx, double* vy,
+                   double* mass, int n) {
+    double E = 0;
+    for (int i = 0; i < n; i++) {
+        E += 0.5 * mass[i] * (vx[i]*vx[i] + vy[i]*vy[i]);
+        for (int j = i+1; j < n; j++) {
+            double dx = x[j]-x[i], dy = y[j]-y[i];
+            E -= mass[i]*mass[j]/sqrt(dx*dx+dy*dy);
+        }
+    }
+    return E;
+}
+""", "nbody", "C", 56),
+
+    ("""
+public double[] computeCenterOfMass(double[] x, double[] y, double[] mass) {
+    double totalMass = 0, cx = 0, cy = 0;
+    for (int i = 0; i < x.length; i++) {
+        totalMass += mass[i];
+        cx += mass[i] * x[i];
+        cy += mass[i] * y[i];
+    }
+    return new double[]{cx/totalMass, cy/totalMass};
+}
+""", "nbody", "C", 56),
+
+    ("""
+def verlet_integration(x, v, f, m, dt):
+    x_new = x + v*dt + 0.5*(f/m)*dt**2
+    f_new = compute_force(x_new)
+    v_new = v + 0.5*(f + f_new)/m * dt
+    return x_new, v_new, f_new
+""", "nbody", "C", 56),
+
+    ("""
+void barnesHuttStep(OctTree* tree, Body* bodies, int n, double theta, double dt) {
+    buildTree(tree, bodies, n);
+    for (int i = 0; i < n; i++) {
+        double fx = 0, fy = 0, fz = 0;
+        computeForceFromTree(tree->root, &bodies[i], theta, &fx, &fy, &fz);
+        bodies[i].vx += fx/bodies[i].mass * dt;
+        bodies[i].vy += fy/bodies[i].mass * dt;
+        bodies[i].x  += bodies[i].vx * dt;
+        bodies[i].y  += bodies[i].vy * dt;
+    }
+}
+""", "nbody", "C", 56),
+
+    # -- hash_set: business-named variants (generic variable names, no freq/kmer/dna) --
+
+    ("""
+public Map<String, Integer> buildLookup(String[] entries) {
+    Map<String, Integer> registry = new LinkedHashMap<>();
+    for (String entry : entries) {
+        String key = entry.trim().toLowerCase();
+        registry.put(key, registry.getOrDefault(key, 0) + 1);
+    }
+    return registry;
+}
+""", "hash_set", "Rust", 58),
+
+    ("""
+public Map<String, Integer> tabulateResponses(String[] responses) {
+    Map<String, Integer> tally = new HashMap<>();
+    for (String r : responses) {
+        tally.merge(r.trim(), 1, Integer::sum);
+    }
+    return tally;
+}
+""", "hash_set", "Rust", 58),
+
+    ("""
+public Map<String, Long> buildInventoryIndex(List<String> skus) {
+    Map<String, Long> catalog = new LinkedHashMap<>();
+    for (String sku : skus) {
+        catalog.put(sku, catalog.getOrDefault(sku, 0L) + 1L);
+    }
+    return catalog;
+}
+""", "hash_set", "Rust", 58),
+
+    ("""
+public Map<String, Integer> aggregateTags(String[][] records) {
+    Map<String, Integer> index = new HashMap<>();
+    for (String[] record : records) {
+        for (String tag : record) {
+            index.merge(tag, 1, Integer::sum);
+        }
+    }
+    return index;
+}
+""", "hash_set", "Rust", 58),
+
+    ("""
+public Map<String, Integer> profileRequests(List<String> log) {
+    Map<String, Integer> hits = new TreeMap<>();
+    for (String entry : log) {
+        String endpoint = entry.split(" ")[1];
+        hits.put(endpoint, hits.getOrDefault(endpoint, 0) + 1);
+    }
+    return hits;
+}
+""", "hash_set", "Rust", 58),
+
+    ("""
+public Map<String, Integer> countCategories(Product[] products) {
+    Map<String, Integer> breakdown = new HashMap<>();
+    for (Product p : products) {
+        breakdown.merge(p.getCategory(), 1, Integer::sum);
+    }
+    return breakdown;
+}
+""", "hash_set", "Rust", 58),
+
+    ("""
+public Map<String, Integer> indexTokens(String document) {
+    Map<String, Integer> occurrences = new LinkedHashMap<>();
+    for (String token : document.split("\\s+")) {
+        occurrences.merge(token.toLowerCase(), 1, Integer::sum);
+    }
+    return occurrences;
+}
+""", "hash_set", "Rust", 58),
+
+    ("""
+public Map<String, Integer> scoreAttributes(String[] attributes) {
+    Map<String, Integer> weights = new HashMap<>();
+    for (String attr : attributes) {
+        weights.put(attr, weights.getOrDefault(attr, 0) + 1);
+    }
+    return weights;
+}
+""", "hash_set", "Rust", 58),
+]
+
+# Merge into main list
+TRAINING_EXAMPLES = TRAINING_EXAMPLES + EXTRA_TRAINING_EXAMPLES
+
+# ── TARGETED FIXES: more distinctive sorting and recursion examples ──────────
+TARGETED_EXAMPLES = [
+
+    # Sorting — emphasize the sorted/ordered output aspect, not nested loops
+    ("""
+public double[] sortAndReturn(double[] input) {
+    double[] output = input.clone();
+    mergeSort(output, 0, output.length - 1);
+    return output;
+}
+private void mergeSort(double[] arr, int left, int right) {
+    if (left < right) {
+        int mid = left + (right - left) / 2;
+        mergeSort(arr, left, mid);
+        mergeSort(arr, mid + 1, right);
+        merge(arr, left, mid, right);
+    }
+}
+""", "sorting", "C", 52),
+
+    ("""
+public int[] rankElements(int[] arr) {
+    int[] sorted = arr.clone();
+    Arrays.sort(sorted);
+    int[] ranks = new int[arr.length];
+    for (int i = 0; i < arr.length; i++)
+        ranks[i] = Arrays.binarySearch(sorted, arr[i]) + 1;
+    return ranks;
+}
+""", "sorting", "C", 52),
+
+    ("""
+def sort_by_key(items, key_fn):
+    n = len(items)
+    for i in range(n):
+        min_idx = i
+        for j in range(i+1, n):
+            if key_fn(items[j]) < key_fn(items[min_idx]):
+                min_idx = j
+        items[i], items[min_idx] = items[min_idx], items[i]
+    return items
+""", "sorting", "C", 52),
+
+    # Recursion — emphasize the self-call / divide-and-conquer, not loops
+    ("""
+public int binarySearch(int[] arr, int target, int low, int high) {
+    if (low > high) return -1;
+    int mid = low + (high - low) / 2;
+    if (arr[mid] == target) return mid;
+    if (arr[mid] < target) return binarySearch(arr, target, mid+1, high);
+    return binarySearch(arr, target, low, mid-1);
+}
+""", "recursion_deep", "C++", 40),
+
+    ("""
+public TreeNode buildBST(int[] vals, int low, int high) {
+    if (low > high) return null;
+    int mid = (low + high) / 2;
+    TreeNode node = new TreeNode(vals[mid]);
+    node.left  = buildBST(vals, low, mid-1);
+    node.right = buildBST(vals, mid+1, high);
+    return node;
+}
+""", "recursion_deep", "C++", 40),
+
+    ("""
+def depth_first_search(graph, node, visited=None):
+    if visited is None: visited = set()
+    visited.add(node)
+    for neighbor in graph[node]:
+        if neighbor not in visited:
+            depth_first_search(graph, neighbor, visited)
+    return visited
+""", "recursion_deep", "C++", 40),
+
+    ("""
+int sumTree(TreeNode* root) {
+    if (root == NULL) return 0;
+    return root->val + sumTree(root->left) + sumTree(root->right);
+}
+""", "recursion_deep", "C++", 40),
+
+    ("""
+public double divideAndConquer(double[] arr, int l, int r) {
+    if (l == r) return arr[l];
+    int mid = (l + r) / 2;
+    double left  = divideAndConquer(arr, l, mid);
+    double right = divideAndConquer(arr, mid+1, r);
+    return combine(left, right);
+}
+""", "recursion_deep", "C++", 40),
+
+    # -- AUTO-FETCHED (greensoftwarelab/Energy-Languages + Rosetta Code) --
+
+    # recursion_deep
+    (
+"""public static void main(final String[] args) throws Exception {
+        int n = 0;
+        if (0 < args.length) {
+            n = Integer.parseInt(args[0]);
+        }
+
+        final int maxDepth = n < (MIN_DEPTH + 2) ? MIN_DEPTH + 2 : n;
+        final int stretchDepth = maxDepth + 1;
+
+        System.out.println("stretch tree of depth " + stretchDepth + "\\t check: " 
+           + bottomUpTree( stretchDepth).itemCheck());
+
+        final TreeNode longLivedTree = bottomUpTree(maxDepth);
+
+        final String[] results = new String[(maxDepth - MIN_DEPTH) / 2 + 1];
+
+        for (int d = MIN_DEPTH; d <= maxDepth; d += 2) {
+            final int depth = d;
+            EXECUTOR_SERVICE.execute(() -> {
+                int check = 0;
+
+                final int iterations = 1 << (maxDepth - depth + MIN_DEPTH);
+                for (int i = 1; i <= iterations; ++i) {
+                    final TreeNode treeNode1 = bottomUpTree(depth);
+                    check += treeNode1.itemCheck();
+                }
+                results[(depth - MIN_DEPTH) / 2] = 
+                   iterations + "\\t trees of depth " + depth + "\\t check: " + check;
+            });
+        }
+
+        EXECUTOR_SERVICE.shutdown();
+        EXECUTOR_SERVICE.awaitTermination(120L, TimeUnit.SECONDS);
+
+        for (final String str : results) {
+            System.out.println(str);
+        }
+
+        System.out.println("long lived tree of depth " + maxDepth + 
+            "\\t check: " + longLivedTree.itemCheck());
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""for (int d = MIN_DEPTH; d <= maxDepth; d += 2) {
+            final int depth = d;
+            EXECUTOR_SERVICE.execute(() -> {
+                int check = 0;
+
+                final int iterations = 1 << (maxDepth - depth + MIN_DEPTH);
+                for (int i = 1; i <= iterations; ++i) {
+                    final TreeNode treeNode1 = bottomUpTree(depth);
+                    check += treeNode1.itemCheck();
+                }
+                results[(depth - MIN_DEPTH) / 2] = 
+                   iterations + "\\t trees of depth " + depth + "\\t check: " + check;
+            });
+        }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""private static TreeNode bottomUpTree(final int depth) {
+        if (0 < depth) {
+            return new TreeNode(bottomUpTree(depth - 1), bottomUpTree(depth - 1));
+        }
+        return new TreeNode();
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""private int itemCheck() {
+            // if necessary deallocate here
+            if (null == left) {
+                return 1;
+            }
+            return 1 + left.itemCheck() + right.itemCheck();
+        }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static void main(final String[] args) throws Exception {
+        int n = 0;
+        if (0 < args.length) {
+            n = Integer.parseInt(args[0]);
+        }
+
+        final int maxDepth = n < (MIN_DEPTH + 2) ? MIN_DEPTH + 2 : n;
+        final int stretchDepth = maxDepth + 1;
+
+        System.out.println("stretch tree of depth " + stretchDepth + "\\t check: " 
+           + bottomUpTree( stretchDepth).itemCheck());
+
+        final TreeNode longLivedTree = bottomUpTree(maxDepth);
+
+        final String[] results = new String[(maxDepth - MIN_DEPTH) / 2 + 1];
+
+        for (int d = MIN_DEPTH; d <= maxDepth; d += 2) {
+            final int depth = d;
+            EXECUTOR_SERVICE.execute(() -> {
+                int check = 0;
+
+                final int iterations = 1 << (maxDepth - depth + MIN_DEPTH);
+                for (int i = 1; i <= iterations; ++i) {
+                    final TreeNode treeNode1 = bottomUpTree(depth);
+                    check += treeNode1.itemCheck();
+                }
+                results[(depth - MIN_DEPTH) / 2] = 
+                   iterations + "\\t trees of depth " + depth + "\\t check: " + check;
+            });
+        }
+
+        EXECUTOR_SERVICE.shutdown();
+        EXECUTOR_SERVICE.awaitTermination(120L, TimeUnit.SECONDS);
+
+        for (final String str : results) {
+            System.out.println(str);
+        }
+
+        System.out.println("long lived tree of depth " + maxDepth + 
+            "\\t check: " + longLivedTree.itemCheck());
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""for (int d = MIN_DEPTH; d <= maxDepth; d += 2) {
+            final int depth = d;
+            EXECUTOR_SERVICE.execute(() -> {
+                int check = 0;
+
+                final int iterations = 1 << (maxDepth - depth + MIN_DEPTH);
+                for (int i = 1; i <= iterations; ++i) {
+                    final TreeNode treeNode1 = bottomUpTree(depth);
+                    check += treeNode1.itemCheck();
+                }
+                results[(depth - MIN_DEPTH) / 2] = 
+                   iterations + "\\t trees of depth " + depth + "\\t check: " + check;
+            });
+        }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""private static TreeNode bottomUpTree(final int depth) {
+        if (0 < depth) {
+            return new TreeNode(bottomUpTree(depth - 1), bottomUpTree(depth - 1));
+        }
+        return new TreeNode();
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""private int itemCheck() {
+            // if necessary deallocate here
+            if (null == left) {
+                return 1;
+            }
+            return 1 + left.itemCheck() + right.itemCheck();
+        }
+
+""", "recursion_deep", "C++", 40),
+
+    # combinatorial
+    (
+"""void print()
+    {
+        for ( int i = 0; i < p.length; i++ ) {
+            System.out.print( p[i] + 1 );
+        }
+        System.out.println();
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""void firstPermutation( int idx )
+    {
+        for ( int i=0; i<p.length; ++i ) {
+           p[i] = i;
+        }
+
+        for ( int i=count.length-1; i>0; --i ) {
+            int d = idx / Fact[i];
+            count[i] = d;
+            idx = idx % Fact[i];
+
+            System.arraycopy( p, 0, pp, 0, i+1 );
+            for ( int j=0; j<=i; ++j ) {
+                p[j] = j+d <= i ? pp[j+d] : pp[j+d-i-1];
+            }
+        }
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""for ( int i=count.length-1; i>0; --i ) {
+            int d = idx / Fact[i];
+            count[i] = d;
+            idx = idx % Fact[i];
+
+            System.arraycopy( p, 0, pp, 0, i+1 );
+            for ( int j=0; j<=i; ++j ) {
+                p[j] = j+d <= i ? pp[j+d] : pp[j+d-i-1];
+            }
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""boolean nextPermutation()
+    {
+        int first = p[1];
+        p[1] = p[0];
+        p[0] = first;
+        
+        int i=1; 
+        while ( ++count[i] > i ) {
+            count[i++] = 0;
+            int next = p[0] = p[1];
+            for ( int j=1; j<i; ++j ) {
+                p[j] = p[j+1];
+            }
+            p[i] = first;
+            first = next;
+        }
+        return true;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""while ( ++count[i] > i ) {
+            count[i++] = 0;
+            int next = p[0] = p[1];
+            for ( int j=1; j<i; ++j ) {
+                p[j] = p[j+1];
+            }
+            p[i] = first;
+            first = next;
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""int countFlips()
+    {
+        int flips = 1;
+	int first = p[0];
+        if ( p[first] != 0 ) {
+            System.arraycopy( p, 0, pp, 0, pp.length );
+            do {
+                 ++flips;
+                 for ( int lo = 1, hi = first - 1; lo < hi; ++lo, --hi ) {
+                    int t = pp[lo];
+                    pp[lo] = pp[hi];
+                    pp[hi] = t;
+                 }
+                 int t = pp[first];
+                 pp[first] = first;
+                 first = t;
+            } while ( pp[first] != 0 );
+        }
+	return flips;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""if ( p[first] != 0 ) {
+            System.arraycopy( p, 0, pp, 0, pp.length );
+            do {
+                 ++flips;
+                 for ( int lo = 1, hi = first - 1; lo < hi; ++lo, --hi ) {
+                    int t = pp[lo];
+                    pp[lo] = pp[hi];
+                    pp[hi] = t;
+                 }
+                 int t = pp[first];
+                 pp[first] = first;
+                 first = t;
+            } while ( pp[first] != 0 );
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""for ( int lo = 1, hi = first - 1; lo < hi; ++lo, --hi ) {
+                    int t = pp[lo];
+                    pp[lo] = pp[hi];
+                    pp[hi] = t;
+                 }
+
+""", "combinatorial", "C", 58),
+    (
+"""void runTask( int task )
+    {
+        int idxMin = task*CHUNKSZ;
+        int idxMax = Math.min( Fact[n], idxMin+CHUNKSZ );
+
+	firstPermutation( idxMin );
+
+        int maxflips = 1;
+        int chksum = 0;
+        for ( int i=idxMin;; ) {
+
+            if ( p[0] != 0 ) {
+                int flips = countFlips();
+                maxflips = Math.max( maxflips, flips );
+		chksum += i%2 ==0 ? flips : -flips;
+            }
+
+	    if ( ++i == idxMax ) {
+	        break;
+	    }
+
+            nextPermutation();
+        }
+	maxFlips[task] = maxflips;
+	chkSums[task]  = chksum;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""for ( int i=idxMin;; ) {
+
+            if ( p[0] != 0 ) {
+                int flips = countFlips();
+                maxflips = Math.max( maxflips, flips );
+		chksum += i%2 ==0 ? flips : -flips;
+            }
+
+	    if ( ++i == idxMax ) {
+	        break;
+	    }
+
+            nextPermutation();
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""if ( p[0] != 0 ) {
+                int flips = countFlips();
+                maxflips = Math.max( maxflips, flips );
+		chksum += i%2 ==0 ? flips : -flips;
+            }
+
+""", "combinatorial", "C", 58),
+    (
+"""public void run()
+    {
+        p     = new int[n];
+        pp    = new int[n];
+        count = new int[n];        
+
+        int task;
+        while ( ( task = taskId.getAndIncrement() ) < NTASKS ) {
+	    runTask( task );
+        }
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public static void main( String[] args )
+    {        
+        n = args.length > 0 ? Integer.parseInt( args[0] ) : 12;
+        if ( n < 0 || n > 12 ) {         // 13! won't fit into int
+            printResult( n, -1, -1 );
+            return;
+        }
+        if ( n <= 1 ) {
+            printResult( n, 0, 0 );
+            return;
+        }
+
+        Fact = new int[n+1];
+        Fact[0] = 1;
+        for ( int i=1; i<Fact.length; ++i ) {
+            Fact[i] = Fact[i-1] * i;
+        }
+        
+        CHUNKSZ = (Fact[n] + NCHUNKS - 1) / NCHUNKS;
+	NTASKS = (Fact[n] + CHUNKSZ - 1) / CHUNKSZ;
+        maxFlips = new int[NTASKS];
+        chkSums  = new int[NTASKS];
+        taskId = new AtomicInteger(0);
+
+        int nthreads = Runtime.getRuntime().availableProcessors();
+        Thread[] threads = new Thread[nthreads];
+        for ( int i=0; i<nthreads; ++i ) {
+            threads[i] = new Thread( new fannkuchredux() );
+            threads[i].start();
+        }
+        for ( Thread t : threads ) {
+            try {
+                t.join();
+            }
+            catch ( InterruptedException e ) {}
+        }
+        
+        int res = 0;
+        for ( int v : maxFlips ) {
+            res = Math.max( res, v );
+        }
+        int chk = 0;
+        for ( int v : chkSums ) {
+            chk += v;
+        }
+        
+        printResult( n, res, chk );
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""for ( Thread t : threads ) {
+            try {
+                t.join();
+            }
+            catch ( InterruptedException e ) {}
+        }
+
+""", "combinatorial", "C", 58),
+
+    # fasta
+    (
+"""public static void main(String[] args) {
+        int n = 1000;
+
+        if (args.length > 0) {
+            n = Integer.parseInt(args[0]);
+        }
+        for (int i = 0; i < WORKERS.length; i++) {
+            WORKERS[i] = new NucleotideSelector();
+            WORKERS[i].setDaemon(true);
+            WORKERS[i].start();
+        }
+        try (OutputStream writer = System.out;) {
+            final int bufferSize = LINE_COUNT * LINE_LENGTH;
+
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                lineFillALU(
+                        new AluBuffer(LINE_LENGTH, bufferSize, i * bufferSize));
+            }
+            speciesFillALU(writer, n * 2, ">ONE Homo sapiens alu\\n");
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                writeBuffer(writer);
+                lineFillRandom(new Buffer(true, LINE_LENGTH, bufferSize));
+            }
+            speciesFillRandom(writer
+                    , n * 3
+                    , ">TWO IUB ambiguity codes\\n"
+                    , true);
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                writeBuffer(writer);
+                lineFillRandom(new Buffer(false, LINE_LENGTH, bufferSize));
+            }
+            speciesFillRandom(writer
+                    , n * 5
+                    , ">THREE Homo sapiens frequency\\n"
+                    , false);
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                writeBuffer(writer);
+            }
+        } catch (IOException ex) {
+        }
+     }
+
+""", "fasta", "C", 55),
+    (
+"""for (int i = 0; i < WORKERS.length; i++) {
+            WORKERS[i] = new NucleotideSelector();
+            WORKERS[i].setDaemon(true);
+            WORKERS[i].start();
+        }
+
+""", "fasta", "C", 55),
+    (
+"""try (OutputStream writer = System.out;) {
+            final int bufferSize = LINE_COUNT * LINE_LENGTH;
+
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                lineFillALU(
+                        new AluBuffer(LINE_LENGTH, bufferSize, i * bufferSize));
+            }
+            speciesFillALU(writer, n * 2, ">ONE Homo sapiens alu\\n");
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                writeBuffer(writer);
+                lineFillRandom(new Buffer(true, LINE_LENGTH, bufferSize));
+            }
+            speciesFillRandom(writer
+                    , n * 3
+                    , ">TWO IUB ambiguity codes\\n"
+                    , true);
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                writeBuffer(writer);
+                lineFillRandom(new Buffer(false, LINE_LENGTH, bufferSize));
+            }
+            speciesFillRandom(writer
+                    , n * 5
+                    , ">THREE Homo sapiens frequency\\n"
+                    , false);
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                writeBuffer(writer);
+            }
+        }
+
+""", "fasta", "C", 55),
+    (
+"""private static void bufferFillALU(OutputStream writer
+            , int buffers) throws IOException {
+        AbstractBuffer buffer;
+
+        for (int i = 0; i < buffers; i++) {
+            buffer = WORKERS[IN.incrementAndGet() % WORKERS.length].take();
+            writer.write(buffer.nucleotides);
+            lineFillALU(buffer);
+        }
+    }
+
+""", "fasta", "C", 55),
+    (
+"""for (int i = 0; i < buffers; i++) {
+            buffer = WORKERS[IN.incrementAndGet() % WORKERS.length].take();
+            writer.write(buffer.nucleotides);
+            lineFillALU(buffer);
+        }
+
+""", "fasta", "C", 55),
+    (
+"""private static void speciesFillALU(final OutputStream writer
+            , final int nChars
+            , final String name) throws IOException {
+        final int bufferSize = LINE_COUNT * LINE_LENGTH;
+        final int bufferCount = nChars / bufferSize;
+        final int bufferLoops = bufferCount - BUFFERS_IN_PLAY;
+        final int charsLeftover = nChars - (bufferCount * bufferSize);
+
+        writer.write(name.getBytes());
+        bufferFillALU(writer, bufferLoops);
+        if (charsLeftover > 0) {
+            writeBuffer(writer);
+            lineFillALU(
+                    new AluBuffer(LINE_LENGTH
+                            , charsLeftover
+                            , nChars - charsLeftover));
+        }
+    }
+
+""", "fasta", "C", 55),
+    (
+"""if (charsLeftover > 0) {
+            writeBuffer(writer);
+            lineFillALU(
+                    new AluBuffer(LINE_LENGTH
+                            , charsLeftover
+                            , nChars - charsLeftover));
+        }
+
+""", "fasta", "C", 55),
+    (
+"""private static void lineFillRandom(Buffer buffer) {
+        for (int i = 0; i < buffer.randoms.length; i++) {
+            last = (last * IA + IC) % IM;
+            buffer.randoms[i] = last * ONE_OVER_IM;
+        }
+        WORKERS[OUT.incrementAndGet() % WORKERS.length].put(buffer);
+    }
+
+""", "fasta", "C", 55),
+    (
+"""private static void bufferFillRandom(OutputStream writer
+            , int loops) throws IOException {
+        AbstractBuffer buffer;
+
+        for (int i = 0; i < loops; i++) {
+            buffer = WORKERS[IN.incrementAndGet() % WORKERS.length].take();
+            writer.write(buffer.nucleotides);
+            lineFillRandom((Buffer) buffer);
+        }
+    }
+
+""", "fasta", "C", 55),
+    (
+"""for (int i = 0; i < loops; i++) {
+            buffer = WORKERS[IN.incrementAndGet() % WORKERS.length].take();
+            writer.write(buffer.nucleotides);
+            lineFillRandom((Buffer) buffer);
+        }
+
+""", "fasta", "C", 55),
+    (
+"""private static void speciesFillRandom(final OutputStream writer
+            , final int nChars
+            , final String name
+            , final boolean isIUB) throws IOException {
+        final int bufferSize = LINE_COUNT * LINE_LENGTH;
+        final int bufferCount = nChars / bufferSize;
+        final int bufferLoops = bufferCount - BUFFERS_IN_PLAY;
+        final int charsLeftover = nChars - (bufferCount * bufferSize);
+
+        writer.write(name.getBytes());
+        bufferFillRandom(writer, bufferLoops);
+        if (charsLeftover > 0) {
+            writeBuffer(writer);    
+            lineFillRandom(new Buffer(isIUB, LINE_LENGTH, charsLeftover));
+        }
+    }
+
+""", "fasta", "C", 55),
+    (
+"""private static void writeBuffer(OutputStream writer) throws IOException {
+        writer.write(
+                WORKERS[IN.incrementAndGet() % WORKERS.length]
+                        .take()
+                        .nucleotides);
+    }
+
+""", "fasta", "C", 55),
+    (
+"""public void put(AbstractBuffer line) {
+            try {
+                in.put(line);
+            } catch (InterruptedException ex) {
+            }
+        }
+
+""", "fasta", "C", 55),
+    (
+"""@Override
+        public void run() {
+            AbstractBuffer line;
+
+            try {
+                for (;;) {
+                    line = in.take();
+                    line.selectNucleotides();
+                    out.put(line);
+                }
+            } catch (InterruptedException ex) {
+            }
+        }
+
+""", "fasta", "C", 55),
+    (
+"""for (;;) {
+                    line = in.take();
+                    line.selectNucleotides();
+                    out.put(line);
+                }
+
+""", "fasta", "C", 55),
+    (
+"""public AbstractBuffer take() {
+            try {
+                return out.take();
+            } catch (InterruptedException ex) {
+            }
+            return null;
+        }
+
+""", "fasta", "C", 55),
+    (
+"""public AbstractBuffer(final int lineLength, final int nChars) {
+            LINE_LENGTH = lineLength;
+            final int outputLineLength = lineLength + 1;
+            LINE_COUNT = nChars / lineLength;
+            CHARS_LEFTOVER = nChars % lineLength;
+            final int nucleotidesSize 
+                    = nChars + LINE_COUNT + (CHARS_LEFTOVER == 0 ? 0 : 1);
+            final int lastNucleotide = nucleotidesSize - 1;
+
+            nucleotides = new byte[nucleotidesSize];
+            for (int i = lineLength
+                    ; i < lastNucleotide
+                    ; i += outputLineLength) {
+                nucleotides[i] = '\\n';
+            }
+            nucleotides[nucleotides.length - 1] = '\\n';
+        }
+
+""", "fasta", "C", 55),
+    (
+"""for (int i = lineLength
+                    ; i < lastNucleotide
+                    ; i += outputLineLength) {
+                nucleotides[i] = '\\n';
+            }
+
+""", "fasta", "C", 55),
+    (
+"""public AluBuffer(final int lineLength
+                , final int nChars
+                , final int offset) {
+            super(lineLength, nChars);
+            this.nChars = nChars;
+            chars = (ALU + ALU.substring(0, LINE_LENGTH)).getBytes();
+            charIndex = offset % ALU.length();
+        }
+
+""", "fasta", "C", 55),
+    (
+"""@Override
+        public void selectNucleotides() {
+            nucleotideIndex = 0;
+            for (int i = 0; i < LINE_COUNT; i++) {
+                ALUFillLine(LINE_LENGTH);
+            }
+            if (CHARS_LEFTOVER > 0) {
+                ALUFillLine(CHARS_LEFTOVER);
+            }
+            charIndex = (charIndex + (nChars * (BUFFERS_IN_PLAY - 1))) 
+                    % ALU.length();
+        }
+
+""", "fasta", "C", 55),
+    (
+"""private void ALUFillLine(final int charCount) {
+            System.arraycopy(chars
+                    , charIndex
+                    , nucleotides
+                    , nucleotideIndex
+                    , charCount);
+            charIndex += charIndex < MAX_ALU_INDEX ? charCount : ALU_ADJUST;
+            nucleotideIndex += charCount + 1;
+        }
+
+""", "fasta", "C", 55),
+    (
+"""public Buffer(final boolean isIUB
+                , final int lineLength
+                , final int nChars) {
+            super(lineLength, nChars);
+            double cp = 0;
+            final double[] dblProbs = isIUB ? iubProbs : sapienProbs;
+
+            chars = isIUB ? iubChars : sapienChars;
+            probs = new float[dblProbs.length];
+            for (int i = 0; i < probs.length; i++) {
+                cp += dblProbs[i];
+                probs[i] = (float) cp;
+            }
+            probs[probs.length - 1] = 2f;
+            randoms = new float[nChars];
+            charsInFullLines = (nChars / lineLength) * lineLength;
+        }
+
+""", "fasta", "C", 55),
+    (
+"""@Override
+        public void selectNucleotides() {
+            int i, j, m;
+            float r;
+            int k;
+
+            for (i = 0, j = 0; i < charsInFullLines; j++) {
+                for (k = 0; k < LINE_LENGTH; k++) {
+                    r = randoms[i++];
+                    for (m = 0; probs[m] < r; m++) {
+                    }
+                    nucleotides[j++] = chars[m];
+                }
+            }
+            for (k = 0; k < CHARS_LEFTOVER; k++) {
+                r = randoms[i++];
+                for (m = 0; probs[m] < r; m++) {
+                }
+                nucleotides[j++] = chars[m];
+            }
+        }
+
+""", "fasta", "C", 55),
+    (
+"""for (i = 0, j = 0; i < charsInFullLines; j++) {
+                for (k = 0; k < LINE_LENGTH; k++) {
+                    r = randoms[i++];
+                    for (m = 0; probs[m] < r; m++) {
+                    }
+                    nucleotides[j++] = chars[m];
+                }
+            }
+
+""", "fasta", "C", 55),
+    (
+"""for (k = 0; k < LINE_LENGTH; k++) {
+                    r = randoms[i++];
+                    for (m = 0; probs[m] < r; m++) {
+                    }
+                    nucleotides[j++] = chars[m];
+                }
+
+""", "fasta", "C", 55),
+    (
+"""for (k = 0; k < CHARS_LEFTOVER; k++) {
+                r = randoms[i++];
+                for (m = 0; probs[m] < r; m++) {
+                }
+                nucleotides[j++] = chars[m];
+            }
+
+""", "fasta", "C", 55),
+    (
+"""public static void main(String[] args) {
+        int n = 1000;
+
+        if (args.length > 0) {
+            n = Integer.parseInt(args[0]);
+        }
+        for (int i = 0; i < WORKERS.length; i++) {
+            WORKERS[i] = new NucleotideSelector();
+            WORKERS[i].setDaemon(true);
+            WORKERS[i].start();
+        }
+        try (OutputStream writer = System.out;) {
+            final int bufferSize = LINE_COUNT * LINE_LENGTH;
+
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                lineFillALU(
+                        new AluBuffer(LINE_LENGTH, bufferSize, i * bufferSize));
+            }
+            speciesFillALU(writer, n * 2, ">ONE Homo sapiens alu\\n");
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                writeBuffer(writer);
+                lineFillRandom(new Buffer(true, LINE_LENGTH, bufferSize));
+            }
+            speciesFillRandom(writer
+                    , n * 3
+                    , ">TWO IUB ambiguity codes\\n"
+                    , true);
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                writeBuffer(writer);
+                lineFillRandom(new Buffer(false, LINE_LENGTH, bufferSize));
+            }
+            speciesFillRandom(writer
+                    , n * 5
+                    , ">THREE Homo sapiens frequency\\n"
+                    , false);
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                writeBuffer(writer);
+            }
+        } catch (IOException ex) {
+        }
+     }
+
+""", "fasta", "C", 55),
+    (
+"""for (int i = 0; i < WORKERS.length; i++) {
+            WORKERS[i] = new NucleotideSelector();
+            WORKERS[i].setDaemon(true);
+            WORKERS[i].start();
+        }
+
+""", "fasta", "C", 55),
+    (
+"""try (OutputStream writer = System.out;) {
+            final int bufferSize = LINE_COUNT * LINE_LENGTH;
+
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                lineFillALU(
+                        new AluBuffer(LINE_LENGTH, bufferSize, i * bufferSize));
+            }
+            speciesFillALU(writer, n * 2, ">ONE Homo sapiens alu\\n");
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                writeBuffer(writer);
+                lineFillRandom(new Buffer(true, LINE_LENGTH, bufferSize));
+            }
+            speciesFillRandom(writer
+                    , n * 3
+                    , ">TWO IUB ambiguity codes\\n"
+                    , true);
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                writeBuffer(writer);
+                lineFillRandom(new Buffer(false, LINE_LENGTH, bufferSize));
+            }
+            speciesFillRandom(writer
+                    , n * 5
+                    , ">THREE Homo sapiens frequency\\n"
+                    , false);
+            for (int i = 0; i < BUFFERS_IN_PLAY; i++) {
+                writeBuffer(writer);
+            }
+        }
+
+""", "fasta", "C", 55),
+    (
+"""private static void bufferFillALU(OutputStream writer
+            , int buffers) throws IOException {
+        AbstractBuffer buffer;
+
+        for (int i = 0; i < buffers; i++) {
+            buffer = WORKERS[IN.incrementAndGet() % WORKERS.length].take();
+            writer.write(buffer.nucleotides);
+            lineFillALU(buffer);
+        }
+    }
+
+""", "fasta", "C", 55),
+    (
+"""for (int i = 0; i < buffers; i++) {
+            buffer = WORKERS[IN.incrementAndGet() % WORKERS.length].take();
+            writer.write(buffer.nucleotides);
+            lineFillALU(buffer);
+        }
+
+""", "fasta", "C", 55),
+    (
+"""private static void speciesFillALU(final OutputStream writer
+            , final int nChars
+            , final String name) throws IOException {
+        final int bufferSize = LINE_COUNT * LINE_LENGTH;
+        final int bufferCount = nChars / bufferSize;
+        final int bufferLoops = bufferCount - BUFFERS_IN_PLAY;
+        final int charsLeftover = nChars - (bufferCount * bufferSize);
+
+        writer.write(name.getBytes());
+        bufferFillALU(writer, bufferLoops);
+        if (charsLeftover > 0) {
+            writeBuffer(writer);
+            lineFillALU(
+                    new AluBuffer(LINE_LENGTH
+                            , charsLeftover
+                            , nChars - charsLeftover));
+        }
+    }
+
+""", "fasta", "C", 55),
+    (
+"""if (charsLeftover > 0) {
+            writeBuffer(writer);
+            lineFillALU(
+                    new AluBuffer(LINE_LENGTH
+                            , charsLeftover
+                            , nChars - charsLeftover));
+        }
+
+""", "fasta", "C", 55),
+    (
+"""private static void lineFillRandom(Buffer buffer) {
+        for (int i = 0; i < buffer.randoms.length; i++) {
+            last = (last * IA + IC) % IM;
+            buffer.randoms[i] = last * ONE_OVER_IM;
+        }
+        WORKERS[OUT.incrementAndGet() % WORKERS.length].put(buffer);
+    }
+
+""", "fasta", "C", 55),
+    (
+"""private static void bufferFillRandom(OutputStream writer
+            , int loops) throws IOException {
+        AbstractBuffer buffer;
+
+        for (int i = 0; i < loops; i++) {
+            buffer = WORKERS[IN.incrementAndGet() % WORKERS.length].take();
+            writer.write(buffer.nucleotides);
+            lineFillRandom((Buffer) buffer);
+        }
+    }
+
+""", "fasta", "C", 55),
+    (
+"""for (int i = 0; i < loops; i++) {
+            buffer = WORKERS[IN.incrementAndGet() % WORKERS.length].take();
+            writer.write(buffer.nucleotides);
+            lineFillRandom((Buffer) buffer);
+        }
+
+""", "fasta", "C", 55),
+    (
+"""private static void speciesFillRandom(final OutputStream writer
+            , final int nChars
+            , final String name
+            , final boolean isIUB) throws IOException {
+        final int bufferSize = LINE_COUNT * LINE_LENGTH;
+        final int bufferCount = nChars / bufferSize;
+        final int bufferLoops = bufferCount - BUFFERS_IN_PLAY;
+        final int charsLeftover = nChars - (bufferCount * bufferSize);
+
+        writer.write(name.getBytes());
+        bufferFillRandom(writer, bufferLoops);
+        if (charsLeftover > 0) {
+            writeBuffer(writer);    
+            lineFillRandom(new Buffer(isIUB, LINE_LENGTH, charsLeftover));
+        }
+    }
+
+""", "fasta", "C", 55),
+    (
+"""private static void writeBuffer(OutputStream writer) throws IOException {
+        writer.write(
+                WORKERS[IN.incrementAndGet() % WORKERS.length]
+                        .take()
+                        .nucleotides);
+    }
+
+""", "fasta", "C", 55),
+    (
+"""public void put(AbstractBuffer line) {
+            try {
+                in.put(line);
+            } catch (InterruptedException ex) {
+            }
+        }
+
+""", "fasta", "C", 55),
+    (
+"""@Override
+        public void run() {
+            AbstractBuffer line;
+
+            try {
+                for (;;) {
+                    line = in.take();
+                    line.selectNucleotides();
+                    out.put(line);
+                }
+            } catch (InterruptedException ex) {
+            }
+        }
+
+""", "fasta", "C", 55),
+    (
+"""for (;;) {
+                    line = in.take();
+                    line.selectNucleotides();
+                    out.put(line);
+                }
+
+""", "fasta", "C", 55),
+    (
+"""public AbstractBuffer take() {
+            try {
+                return out.take();
+            } catch (InterruptedException ex) {
+            }
+            return null;
+        }
+
+""", "fasta", "C", 55),
+    (
+"""public AbstractBuffer(final int lineLength, final int nChars) {
+            LINE_LENGTH = lineLength;
+            final int outputLineLength = lineLength + 1;
+            LINE_COUNT = nChars / lineLength;
+            CHARS_LEFTOVER = nChars % lineLength;
+            final int nucleotidesSize 
+                    = nChars + LINE_COUNT + (CHARS_LEFTOVER == 0 ? 0 : 1);
+            final int lastNucleotide = nucleotidesSize - 1;
+
+            nucleotides = new byte[nucleotidesSize];
+            for (int i = lineLength
+                    ; i < lastNucleotide
+                    ; i += outputLineLength) {
+                nucleotides[i] = '\\n';
+            }
+            nucleotides[nucleotides.length - 1] = '\\n';
+        }
+
+""", "fasta", "C", 55),
+    (
+"""for (int i = lineLength
+                    ; i < lastNucleotide
+                    ; i += outputLineLength) {
+                nucleotides[i] = '\\n';
+            }
+
+""", "fasta", "C", 55),
+    (
+"""public AluBuffer(final int lineLength
+                , final int nChars
+                , final int offset) {
+            super(lineLength, nChars);
+            this.nChars = nChars;
+            chars = (ALU + ALU.substring(0, LINE_LENGTH)).getBytes();
+            charIndex = offset % ALU.length();
+        }
+
+""", "fasta", "C", 55),
+    (
+"""@Override
+        public void selectNucleotides() {
+            nucleotideIndex = 0;
+            for (int i = 0; i < LINE_COUNT; i++) {
+                ALUFillLine(LINE_LENGTH);
+            }
+            if (CHARS_LEFTOVER > 0) {
+                ALUFillLine(CHARS_LEFTOVER);
+            }
+            charIndex = (charIndex + (nChars * (BUFFERS_IN_PLAY - 1))) 
+                    % ALU.length();
+        }
+
+""", "fasta", "C", 55),
+    (
+"""private void ALUFillLine(final int charCount) {
+            System.arraycopy(chars
+                    , charIndex
+                    , nucleotides
+                    , nucleotideIndex
+                    , charCount);
+            charIndex += charIndex < MAX_ALU_INDEX ? charCount : ALU_ADJUST;
+            nucleotideIndex += charCount + 1;
+        }
+
+""", "fasta", "C", 55),
+    (
+"""public Buffer(final boolean isIUB
+                , final int lineLength
+                , final int nChars) {
+            super(lineLength, nChars);
+            double cp = 0;
+            final double[] dblProbs = isIUB ? iubProbs : sapienProbs;
+
+            chars = isIUB ? iubChars : sapienChars;
+            probs = new float[dblProbs.length];
+            for (int i = 0; i < probs.length; i++) {
+                cp += dblProbs[i];
+                probs[i] = (float) cp;
+            }
+            probs[probs.length - 1] = 2f;
+            randoms = new float[nChars];
+            charsInFullLines = (nChars / lineLength) * lineLength;
+        }
+
+""", "fasta", "C", 55),
+    (
+"""@Override
+        public void selectNucleotides() {
+            int i, j, m;
+            float r;
+            int k;
+
+            for (i = 0, j = 0; i < charsInFullLines; j++) {
+                for (k = 0; k < LINE_LENGTH; k++) {
+                    r = randoms[i++];
+                    for (m = 0; probs[m] < r; m++) {
+                    }
+                    nucleotides[j++] = chars[m];
+                }
+            }
+            for (k = 0; k < CHARS_LEFTOVER; k++) {
+                r = randoms[i++];
+                for (m = 0; probs[m] < r; m++) {
+                }
+                nucleotides[j++] = chars[m];
+            }
+        }
+
+""", "fasta", "C", 55),
+    (
+"""for (i = 0, j = 0; i < charsInFullLines; j++) {
+                for (k = 0; k < LINE_LENGTH; k++) {
+                    r = randoms[i++];
+                    for (m = 0; probs[m] < r; m++) {
+                    }
+                    nucleotides[j++] = chars[m];
+                }
+            }
+
+""", "fasta", "C", 55),
+    (
+"""for (k = 0; k < LINE_LENGTH; k++) {
+                    r = randoms[i++];
+                    for (m = 0; probs[m] < r; m++) {
+                    }
+                    nucleotides[j++] = chars[m];
+                }
+
+""", "fasta", "C", 55),
+    (
+"""for (k = 0; k < CHARS_LEFTOVER; k++) {
+                r = randoms[i++];
+                for (m = 0; probs[m] < r; m++) {
+                }
+                nucleotides[j++] = chars[m];
+            }
+
+""", "fasta", "C", 55),
+
+    # hash_set
+    (
+"""static ArrayList<Callable<Result>> createFragmentTasks(final byte[] sequence,
+            int[] fragmentLengths) {
+        ArrayList<Callable<Result>> tasks = new ArrayList<>();
+        for (int fragmentLength : fragmentLengths) {
+            for (int index = 0; index < fragmentLength; index++) {
+                int offset = index;
+                tasks.add(() -> createFragmentMap(sequence, offset, fragmentLength));
+            }
+        }
+        return tasks;
+    }
+
+""", "hash_set", "Rust", 58),
+    (
+"""for (int fragmentLength : fragmentLengths) {
+            for (int index = 0; index < fragmentLength; index++) {
+                int offset = index;
+                tasks.add(() -> createFragmentMap(sequence, offset, fragmentLength));
+            }
+        }
+
+""", "hash_set", "Rust", 58),
+    (
+"""static Result createFragmentMap(byte[] sequence, int offset, int fragmentLength) {
+        Result res = new Result(fragmentLength);
+        Long2IntOpenHashMap map = res.map;
+        int lastIndex = sequence.length - fragmentLength + 1;
+        for (int index = offset; index < lastIndex; index += fragmentLength) {
+            map.addTo(getKey(sequence, index, fragmentLength), 1);
+        }
+
+        return res;
+    }
+
+""", "hash_set", "Rust", 58),
+    (
+"""static String writeFrequencies(float totalCount, Result frequencies) {
+        List<Entry<String, Integer>> freq = new ArrayList<>(frequencies.map.size());
+        frequencies.map.forEach((key, cnt) -> freq.add(new SimpleEntry<>(keyToString(key,
+                frequencies.keyLength), cnt)));
+        freq.sort(Map.Entry.comparingByValue(Comparator.reverseOrder()));
+        StringBuilder sb = new StringBuilder();
+        for (Entry<String, Integer> entry : freq) {
+            sb.append(String.format(Locale.ENGLISH, "%s %.3f\\n", entry.getKey(),
+                    entry.getValue() * 100.0f / totalCount));
+        }
+        return sb.append('\\n').toString();
+    }
+
+""", "hash_set", "Rust", 58),
+    (
+"""static String writeCount(List<Future<Result>> futures, String nucleotideFragment)
+            throws Exception {
+        byte[] key = toCodes(nucleotideFragment.getBytes(StandardCharsets.ISO_8859_1),
+                nucleotideFragment.length());
+        long k = getKey(key, 0, nucleotideFragment.length());
+        int count = 0;
+        for (Future<Result> future : futures) {
+            Result f = future.get();
+            if (f.keyLength == nucleotideFragment.length()) {
+                count += f.map.get(k);
+            }
+        }
+
+        return count + "\\t" + nucleotideFragment + '\\n';
+    }
+
+""", "hash_set", "Rust", 58),
+    (
+"""for (Future<Result> future : futures) {
+            Result f = future.get();
+            if (f.keyLength == nucleotideFragment.length()) {
+                count += f.map.get(k);
+            }
+        }
+
+""", "hash_set", "Rust", 58),
+    (
+"""static String keyToString(long key, int length) {
+        char[] res = new char[length];
+        for (int i = 0; i < length; i++) {
+            res[length - i - 1] = nucleotides[(int) (key & 0x3)];
+            key >>= 2;
+        }
+        return new String(res);
+    }
+
+""", "hash_set", "Rust", 58),
+    (
+"""static long getKey(byte[] arr, int offset, int length) {
+        long key = 0;
+        for (int i = offset; i < offset + length; i++) {
+            key = key * 4 + arr[i];
+        }
+        return key;
+    }
+
+""", "hash_set", "Rust", 58),
+    (
+"""static byte[] toCodes(byte[] sequence, int length) {
+        byte[] result = new byte[length];
+        for (int i = 0; i < length; i++) {
+            result[i] = codes[sequence[i] & 0x7];
+        }
+        return result;
+    }
+
+""", "hash_set", "Rust", 58),
+    (
+"""static byte[] read(InputStream is) throws IOException {
+        String line;
+        BufferedReader in = new BufferedReader(new InputStreamReader(is,
+                StandardCharsets.ISO_8859_1));
+        while ((line = in.readLine()) != null) {
+            if (line.startsWith(">THREE"))
+                break;
+        }
+    
+        byte[] bytes = new byte[1048576];
+        int position = 0;
+        while ((line = in.readLine()) != null && line.charAt(0) != '>') {
+            if (line.length() + position > bytes.length) {
+                byte[] newBytes = new byte[bytes.length * 2];
+                System.arraycopy(bytes, 0, newBytes, 0, position);
+                bytes = newBytes;
+            }
+            for (int i = 0; i < line.length(); i++)
+                bytes[position++] = (byte) line.charAt(i);
+        }
+    
+        return toCodes(bytes, position);
+    }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static void main(String[] args) throws Exception {
+        byte[] sequence = read(System.in);
+
+        ExecutorService pool = Executors.newFixedThreadPool(Runtime.getRuntime()
+                .availableProcessors());
+        int[] fragmentLengths = { 1, 2, 3, 4, 6, 12, 18 };
+        List<Future<Result>> futures = pool.invokeAll(createFragmentTasks(sequence,
+                fragmentLengths));
+        pool.shutdown();
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(writeFrequencies(sequence.length, futures.get(0).get()));
+        sb.append(writeFrequencies(sequence.length - 1,
+                sumTwoMaps(futures.get(1).get(), futures.get(2).get())));
+
+        String[] nucleotideFragments = { "GGT", "GGTA", "GGTATT", "GGTATTTTAATT",
+                "GGTATTTTAATTTATAGT" };
+        for (String nucleotideFragment : nucleotideFragments) {
+            sb.append(writeCount(futures, nucleotideFragment));
+        }
+
+        System.out.print(sb);
+    }
+
+""", "hash_set", "Rust", 58),
+
+    # matrix
+    (
+"""static int getByte(int x, int y){
+      int res=0;
+      for(int i=0;i<8;i+=2){
+         double Zr1=Crb[x+i];
+         double Zi1=Cib[y];
+
+         double Zr2=Crb[x+i+1];
+         double Zi2=Cib[y];
+
+         int b=0;
+         int j=49;do{
+            double nZr1=Zr1*Zr1-Zi1*Zi1+Crb[x+i];
+            double nZi1=Zr1*Zi1+Zr1*Zi1+Cib[y];
+            Zr1=nZr1;Zi1=nZi1;
+
+            double nZr2=Zr2*Zr2-Zi2*Zi2+Crb[x+i+1];
+            double nZi2=Zr2*Zi2+Zr2*Zi2+Cib[y];
+            Zr2=nZr2;Zi2=nZi2;
+
+            if(Zr1*Zr1+Zi1*Zi1>4){b|=2;if(b==3)break;}
+            if(Zr2*Zr2+Zi2*Zi2>4){b|=1;if(b==3)break;}
+         }while(--j>0);
+         res=(res<<2)+b;
+      }
+      return res^-1;
+   }
+
+""", "matrix", "C", 56),
+    (
+"""for(int i=0;i<8;i+=2){
+         double Zr1=Crb[x+i];
+         double Zi1=Cib[y];
+
+         double Zr2=Crb[x+i+1];
+         double Zi2=Cib[y];
+
+         int b=0;
+         int j=49;do{
+            double nZr1=Zr1*Zr1-Zi1*Zi1+Crb[x+i];
+            double nZi1=Zr1*Zi1+Zr1*Zi1+Cib[y];
+            Zr1=nZr1;Zi1=nZi1;
+
+            double nZr2=Zr2*Zr2-Zi2*Zi2+Crb[x+i+1];
+            double nZi2=Zr2*Zi2+Zr2*Zi2+Cib[y];
+            Zr2=nZr2;Zi2=nZi2;
+
+            if(Zr1*Zr1+Zi1*Zi1>4){b|=2;if(b==3)break;}
+            if(Zr2*Zr2+Zi2*Zi2>4){b|=1;if(b==3)break;}
+         }while(--j>0);
+         res=(res<<2)+b;
+      }
+
+""", "matrix", "C", 56),
+    (
+"""public static void main(String[] args) throws Exception {
+      int N=6000;
+      if (args.length>=1) N=Integer.parseInt(args[0]);
+
+      Crb=new double[N+7]; Cib=new double[N+7];
+      double invN=2.0/N; for(int i=0;i<N;i++){ Cib[i]=i*invN-1.0; Crb[i]=i*invN-1.5; }
+      yCt=new AtomicInteger();
+      out=new byte[N][(N+7)/8];
+
+      Thread[] pool=new Thread[2*Runtime.getRuntime().availableProcessors()];
+      for (int i=0;i<pool.length;i++)
+         pool[i]=new Thread(){
+            public void run() {
+                int y; while((y=yCt.getAndIncrement())<out.length) putLine(y,out[y]);
+            }
+         };
+      for (Thread t:pool) t.start();
+      for (Thread t:pool) t.join();
+
+      OutputStream stream = new BufferedOutputStream(System.out);
+      stream.write(("P4\\n"+N+" "+N+"\\n").getBytes());
+      for(int i=0;i<N;i++) stream.write(out[i]);
+      stream.close();
+   }
+
+""", "matrix", "C", 56),
+    (
+"""Thread(){
+            public void run() {
+                int y; while((y=yCt.getAndIncrement())<out.length) putLine(y,out[y]);
+            }
+         }
+
+""", "matrix", "C", 56),
+    (
+"""static int getByte(int x, int y){
+      int res=0;
+      for(int i=0;i<8;i+=2){
+         double Zr1=Crb[x+i];
+         double Zi1=Cib[y];
+
+         double Zr2=Crb[x+i+1];
+         double Zi2=Cib[y];
+
+         int b=0;
+         int j=49;do{
+            double nZr1=Zr1*Zr1-Zi1*Zi1+Crb[x+i];
+            double nZi1=Zr1*Zi1+Zr1*Zi1+Cib[y];
+            Zr1=nZr1;Zi1=nZi1;
+
+            double nZr2=Zr2*Zr2-Zi2*Zi2+Crb[x+i+1];
+            double nZi2=Zr2*Zi2+Zr2*Zi2+Cib[y];
+            Zr2=nZr2;Zi2=nZi2;
+
+            if(Zr1*Zr1+Zi1*Zi1>4){b|=2;if(b==3)break;}
+            if(Zr2*Zr2+Zi2*Zi2>4){b|=1;if(b==3)break;}
+         }while(--j>0);
+         res=(res<<2)+b;
+      }
+      return res^-1;
+   }
+
+""", "matrix", "C", 56),
+    (
+"""for(int i=0;i<8;i+=2){
+         double Zr1=Crb[x+i];
+         double Zi1=Cib[y];
+
+         double Zr2=Crb[x+i+1];
+         double Zi2=Cib[y];
+
+         int b=0;
+         int j=49;do{
+            double nZr1=Zr1*Zr1-Zi1*Zi1+Crb[x+i];
+            double nZi1=Zr1*Zi1+Zr1*Zi1+Cib[y];
+            Zr1=nZr1;Zi1=nZi1;
+
+            double nZr2=Zr2*Zr2-Zi2*Zi2+Crb[x+i+1];
+            double nZi2=Zr2*Zi2+Zr2*Zi2+Cib[y];
+            Zr2=nZr2;Zi2=nZi2;
+
+            if(Zr1*Zr1+Zi1*Zi1>4){b|=2;if(b==3)break;}
+            if(Zr2*Zr2+Zi2*Zi2>4){b|=1;if(b==3)break;}
+         }while(--j>0);
+         res=(res<<2)+b;
+      }
+
+""", "matrix", "C", 56),
+    (
+"""public static void main(String[] args) throws Exception {
+      int N=6000;
+      if (args.length>=1) N=Integer.parseInt(args[0]);
+
+      Crb=new double[N+7]; Cib=new double[N+7];
+      double invN=2.0/N; for(int i=0;i<N;i++){ Cib[i]=i*invN-1.0; Crb[i]=i*invN-1.5; }
+      yCt=new AtomicInteger();
+      out=new byte[N][(N+7)/8];
+
+      Thread[] pool=new Thread[2*Runtime.getRuntime().availableProcessors()];
+      for (int i=0;i<pool.length;i++)
+         pool[i]=new Thread(){
+            public void run() {
+                int y; while((y=yCt.getAndIncrement())<out.length) putLine(y,out[y]);
+            }
+         };
+      for (Thread t:pool) t.start();
+      for (Thread t:pool) t.join();
+
+      OutputStream stream = new BufferedOutputStream(System.out);
+      stream.write(("P4\\n"+N+" "+N+"\\n").getBytes());
+      for(int i=0;i<N;i++) stream.write(out[i]);
+      stream.close();
+   }
+
+""", "matrix", "C", 56),
+    (
+"""Thread(){
+            public void run() {
+                int y; while((y=yCt.getAndIncrement())<out.length) putLine(y,out[y]);
+            }
+         }
+
+""", "matrix", "C", 56),
+
+    # nbody
+    (
+"""public static void main(String[] args) {
+        int n = Integer.parseInt(args[0]);
+
+        NBodySystem bodies = new NBodySystem();
+        System.out.printf("%.9f\\n", bodies.energy());
+        for (int i=0; i<n; ++i)
+           bodies.advance(0.01);
+        System.out.printf("%.9f\\n", bodies.energy());
+    }
+
+""", "nbody", "C", 56),
+    (
+"""public NBodySystem(){
+      bodies = new Body[]{
+            Body.sun(),
+            Body.jupiter(),
+            Body.saturn(),
+            Body.uranus(),
+            Body.neptune()
+         };
+
+      double px = 0.0;
+      double py = 0.0;
+      double pz = 0.0;
+      for(int i=0; i < LENGTH; ++i) {
+         px += bodies[i].vx * bodies[i].mass;
+         py += bodies[i].vy * bodies[i].mass;
+         pz += bodies[i].vz * bodies[i].mass;
+      }
+      bodies[0].offsetMomentum(px,py,pz);
+   }
+
+""", "nbody", "C", 56),
+    (
+"""for(int i=0; i < LENGTH; ++i) {
+         px += bodies[i].vx * bodies[i].mass;
+         py += bodies[i].vy * bodies[i].mass;
+         pz += bodies[i].vz * bodies[i].mass;
+      }
+
+""", "nbody", "C", 56),
+    (
+"""public void advance(double dt) {
+      Body[] b = bodies;
+      for(int i=0; i < LENGTH-1; ++i) {
+         Body iBody = b[i];
+         double iMass = iBody.mass;
+         double ix = iBody.x, iy = iBody.y, iz = iBody.z;
+
+         for(int j=i+1; j < LENGTH; ++j) {
+            Body jBody = b[j];
+            double dx = ix - jBody.x;
+            double dy = iy - jBody.y;
+            double dz = iz - jBody.z;
+
+            double dSquared = dx * dx + dy * dy + dz * dz;
+            double distance = Math.sqrt(dSquared);
+            double mag = dt / (dSquared * distance);
+
+            double jMass = jBody.mass;
+
+            iBody.vx -= dx * jMass * mag;
+            iBody.vy -= dy * jMass * mag;
+            iBody.vz -= dz * jMass * mag;
+
+            jBody.vx += dx * iMass * mag;
+            jBody.vy += dy * iMass * mag;
+            jBody.vz += dz * iMass * mag;
+         }
+      }
+
+      for(int i=0; i < LENGTH; ++i) {
+         Body body = b[i];
+         body.x += dt * body.vx;
+         body.y += dt * body.vy;
+         body.z += dt * body.vz;
+      }
+   }
+
+""", "nbody", "C", 56),
+    (
+"""for(int i=0; i < LENGTH-1; ++i) {
+         Body iBody = b[i];
+         double iMass = iBody.mass;
+         double ix = iBody.x, iy = iBody.y, iz = iBody.z;
+
+         for(int j=i+1; j < LENGTH; ++j) {
+            Body jBody = b[j];
+            double dx = ix - jBody.x;
+            double dy = iy - jBody.y;
+            double dz = iz - jBody.z;
+
+            double dSquared = dx * dx + dy * dy + dz * dz;
+            double distance = Math.sqrt(dSquared);
+            double mag = dt / (dSquared * distance);
+
+            double jMass = jBody.mass;
+
+            iBody.vx -= dx * jMass * mag;
+            iBody.vy -= dy * jMass * mag;
+            iBody.vz -= dz * jMass * mag;
+
+            jBody.vx += dx * iMass * mag;
+            jBody.vy += dy * iMass * mag;
+            jBody.vz += dz * iMass * mag;
+         }
+      }
+
+""", "nbody", "C", 56),
+    (
+"""for(int j=i+1; j < LENGTH; ++j) {
+            Body jBody = b[j];
+            double dx = ix - jBody.x;
+            double dy = iy - jBody.y;
+            double dz = iz - jBody.z;
+
+            double dSquared = dx * dx + dy * dy + dz * dz;
+            double distance = Math.sqrt(dSquared);
+            double mag = dt / (dSquared * distance);
+
+            double jMass = jBody.mass;
+
+            iBody.vx -= dx * jMass * mag;
+            iBody.vy -= dy * jMass * mag;
+            iBody.vz -= dz * jMass * mag;
+
+            jBody.vx += dx * iMass * mag;
+            jBody.vy += dy * iMass * mag;
+            jBody.vz += dz * iMass * mag;
+         }
+
+""", "nbody", "C", 56),
+    (
+"""for(int i=0; i < LENGTH; ++i) {
+         Body body = b[i];
+         body.x += dt * body.vx;
+         body.y += dt * body.vy;
+         body.z += dt * body.vz;
+      }
+
+""", "nbody", "C", 56),
+    (
+"""public double energy(){
+      double dx, dy, dz, distance;
+      double e = 0.0;
+
+      for (int i=0; i < bodies.length; ++i) {
+         Body iBody = bodies[i];
+         e += 0.5 * iBody.mass *
+            ( iBody.vx * iBody.vx
+                + iBody.vy * iBody.vy
+                + iBody.vz * iBody.vz );
+
+         for (int j=i+1; j < bodies.length; ++j) {
+            Body jBody = bodies[j];
+            dx = iBody.x - jBody.x;
+            dy = iBody.y - jBody.y;
+            dz = iBody.z - jBody.z;
+
+            distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            e -= (iBody.mass * jBody.mass) / distance;
+         }
+      }
+      return e;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""for (int i=0; i < bodies.length; ++i) {
+         Body iBody = bodies[i];
+         e += 0.5 * iBody.mass *
+            ( iBody.vx * iBody.vx
+                + iBody.vy * iBody.vy
+                + iBody.vz * iBody.vz );
+
+         for (int j=i+1; j < bodies.length; ++j) {
+            Body jBody = bodies[j];
+            dx = iBody.x - jBody.x;
+            dy = iBody.y - jBody.y;
+            dz = iBody.z - jBody.z;
+
+            distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            e -= (iBody.mass * jBody.mass) / distance;
+         }
+      }
+
+""", "nbody", "C", 56),
+    (
+"""for (int j=i+1; j < bodies.length; ++j) {
+            Body jBody = bodies[j];
+            dx = iBody.x - jBody.x;
+            dy = iBody.y - jBody.y;
+            dz = iBody.z - jBody.z;
+
+            distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            e -= (iBody.mass * jBody.mass) / distance;
+         }
+
+""", "nbody", "C", 56),
+    (
+"""static Body jupiter(){
+      Body p = new Body();
+      p.x = 4.84143144246472090e+00;
+      p.y = -1.16032004402742839e+00;
+      p.z = -1.03622044471123109e-01;
+      p.vx = 1.66007664274403694e-03 * DAYS_PER_YEAR;
+      p.vy = 7.69901118419740425e-03 * DAYS_PER_YEAR;
+      p.vz = -6.90460016972063023e-05 * DAYS_PER_YEAR;
+      p.mass = 9.54791938424326609e-04 * SOLAR_MASS;
+      return p;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""static Body saturn(){
+      Body p = new Body();
+      p.x = 8.34336671824457987e+00;
+      p.y = 4.12479856412430479e+00;
+      p.z = -4.03523417114321381e-01;
+      p.vx = -2.76742510726862411e-03 * DAYS_PER_YEAR;
+      p.vy = 4.99852801234917238e-03 * DAYS_PER_YEAR;
+      p.vz = 2.30417297573763929e-05 * DAYS_PER_YEAR;
+      p.mass = 2.85885980666130812e-04 * SOLAR_MASS;
+      return p;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""static Body uranus(){
+      Body p = new Body();
+      p.x = 1.28943695621391310e+01;
+      p.y = -1.51111514016986312e+01;
+      p.z = -2.23307578892655734e-01;
+      p.vx = 2.96460137564761618e-03 * DAYS_PER_YEAR;
+      p.vy = 2.37847173959480950e-03 * DAYS_PER_YEAR;
+      p.vz = -2.96589568540237556e-05 * DAYS_PER_YEAR;
+      p.mass = 4.36624404335156298e-05 * SOLAR_MASS;
+      return p;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""static Body neptune(){
+      Body p = new Body();
+      p.x = 1.53796971148509165e+01;
+      p.y = -2.59193146099879641e+01;
+      p.z = 1.79258772950371181e-01;
+      p.vx = 2.68067772490389322e-03 * DAYS_PER_YEAR;
+      p.vy = 1.62824170038242295e-03 * DAYS_PER_YEAR;
+      p.vz = -9.51592254519715870e-05 * DAYS_PER_YEAR;
+      p.mass = 5.15138902046611451e-05 * SOLAR_MASS;
+      return p;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""static Body sun(){
+      Body p = new Body();
+      p.mass = SOLAR_MASS;
+      return p;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""Body offsetMomentum(double px, double py, double pz){
+      vx = -px / SOLAR_MASS;
+      vy = -py / SOLAR_MASS;
+      vz = -pz / SOLAR_MASS;
+      return this;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""public static void main(String[] args) {
+        int n = Integer.parseInt(args[0]);
+
+        NBodySystem bodies = new NBodySystem();
+        System.out.printf("%.9f\\n", bodies.energy());
+        for (int i=0; i<n; ++i)
+           bodies.advance(0.01);
+        System.out.printf("%.9f\\n", bodies.energy());
+    }
+
+""", "nbody", "C", 56),
+    (
+"""public NBodySystem(){
+      bodies = new Body[]{
+            Body.sun(),
+            Body.jupiter(),
+            Body.saturn(),
+            Body.uranus(),
+            Body.neptune()
+         };
+
+      double px = 0.0;
+      double py = 0.0;
+      double pz = 0.0;
+      for(int i=0; i < LENGTH; ++i) {
+         px += bodies[i].vx * bodies[i].mass;
+         py += bodies[i].vy * bodies[i].mass;
+         pz += bodies[i].vz * bodies[i].mass;
+      }
+      bodies[0].offsetMomentum(px,py,pz);
+   }
+
+""", "nbody", "C", 56),
+    (
+"""for(int i=0; i < LENGTH; ++i) {
+         px += bodies[i].vx * bodies[i].mass;
+         py += bodies[i].vy * bodies[i].mass;
+         pz += bodies[i].vz * bodies[i].mass;
+      }
+
+""", "nbody", "C", 56),
+    (
+"""public void advance(double dt) {
+      Body[] b = bodies;
+      for(int i=0; i < LENGTH-1; ++i) {
+         Body iBody = b[i];
+         double iMass = iBody.mass;
+         double ix = iBody.x, iy = iBody.y, iz = iBody.z;
+
+         for(int j=i+1; j < LENGTH; ++j) {
+            Body jBody = b[j];
+            double dx = ix - jBody.x;
+            double dy = iy - jBody.y;
+            double dz = iz - jBody.z;
+
+            double dSquared = dx * dx + dy * dy + dz * dz;
+            double distance = Math.sqrt(dSquared);
+            double mag = dt / (dSquared * distance);
+
+            double jMass = jBody.mass;
+
+            iBody.vx -= dx * jMass * mag;
+            iBody.vy -= dy * jMass * mag;
+            iBody.vz -= dz * jMass * mag;
+
+            jBody.vx += dx * iMass * mag;
+            jBody.vy += dy * iMass * mag;
+            jBody.vz += dz * iMass * mag;
+         }
+      }
+
+      for(int i=0; i < LENGTH; ++i) {
+         Body body = b[i];
+         body.x += dt * body.vx;
+         body.y += dt * body.vy;
+         body.z += dt * body.vz;
+      }
+   }
+
+""", "nbody", "C", 56),
+    (
+"""for(int i=0; i < LENGTH-1; ++i) {
+         Body iBody = b[i];
+         double iMass = iBody.mass;
+         double ix = iBody.x, iy = iBody.y, iz = iBody.z;
+
+         for(int j=i+1; j < LENGTH; ++j) {
+            Body jBody = b[j];
+            double dx = ix - jBody.x;
+            double dy = iy - jBody.y;
+            double dz = iz - jBody.z;
+
+            double dSquared = dx * dx + dy * dy + dz * dz;
+            double distance = Math.sqrt(dSquared);
+            double mag = dt / (dSquared * distance);
+
+            double jMass = jBody.mass;
+
+            iBody.vx -= dx * jMass * mag;
+            iBody.vy -= dy * jMass * mag;
+            iBody.vz -= dz * jMass * mag;
+
+            jBody.vx += dx * iMass * mag;
+            jBody.vy += dy * iMass * mag;
+            jBody.vz += dz * iMass * mag;
+         }
+      }
+
+""", "nbody", "C", 56),
+    (
+"""for(int j=i+1; j < LENGTH; ++j) {
+            Body jBody = b[j];
+            double dx = ix - jBody.x;
+            double dy = iy - jBody.y;
+            double dz = iz - jBody.z;
+
+            double dSquared = dx * dx + dy * dy + dz * dz;
+            double distance = Math.sqrt(dSquared);
+            double mag = dt / (dSquared * distance);
+
+            double jMass = jBody.mass;
+
+            iBody.vx -= dx * jMass * mag;
+            iBody.vy -= dy * jMass * mag;
+            iBody.vz -= dz * jMass * mag;
+
+            jBody.vx += dx * iMass * mag;
+            jBody.vy += dy * iMass * mag;
+            jBody.vz += dz * iMass * mag;
+         }
+
+""", "nbody", "C", 56),
+    (
+"""for(int i=0; i < LENGTH; ++i) {
+         Body body = b[i];
+         body.x += dt * body.vx;
+         body.y += dt * body.vy;
+         body.z += dt * body.vz;
+      }
+
+""", "nbody", "C", 56),
+    (
+"""public double energy(){
+      double dx, dy, dz, distance;
+      double e = 0.0;
+
+      for (int i=0; i < bodies.length; ++i) {
+         Body iBody = bodies[i];
+         e += 0.5 * iBody.mass *
+            ( iBody.vx * iBody.vx
+                + iBody.vy * iBody.vy
+                + iBody.vz * iBody.vz );
+
+         for (int j=i+1; j < bodies.length; ++j) {
+            Body jBody = bodies[j];
+            dx = iBody.x - jBody.x;
+            dy = iBody.y - jBody.y;
+            dz = iBody.z - jBody.z;
+
+            distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            e -= (iBody.mass * jBody.mass) / distance;
+         }
+      }
+      return e;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""for (int i=0; i < bodies.length; ++i) {
+         Body iBody = bodies[i];
+         e += 0.5 * iBody.mass *
+            ( iBody.vx * iBody.vx
+                + iBody.vy * iBody.vy
+                + iBody.vz * iBody.vz );
+
+         for (int j=i+1; j < bodies.length; ++j) {
+            Body jBody = bodies[j];
+            dx = iBody.x - jBody.x;
+            dy = iBody.y - jBody.y;
+            dz = iBody.z - jBody.z;
+
+            distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            e -= (iBody.mass * jBody.mass) / distance;
+         }
+      }
+
+""", "nbody", "C", 56),
+    (
+"""for (int j=i+1; j < bodies.length; ++j) {
+            Body jBody = bodies[j];
+            dx = iBody.x - jBody.x;
+            dy = iBody.y - jBody.y;
+            dz = iBody.z - jBody.z;
+
+            distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            e -= (iBody.mass * jBody.mass) / distance;
+         }
+
+""", "nbody", "C", 56),
+    (
+"""static Body jupiter(){
+      Body p = new Body();
+      p.x = 4.84143144246472090e+00;
+      p.y = -1.16032004402742839e+00;
+      p.z = -1.03622044471123109e-01;
+      p.vx = 1.66007664274403694e-03 * DAYS_PER_YEAR;
+      p.vy = 7.69901118419740425e-03 * DAYS_PER_YEAR;
+      p.vz = -6.90460016972063023e-05 * DAYS_PER_YEAR;
+      p.mass = 9.54791938424326609e-04 * SOLAR_MASS;
+      return p;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""static Body saturn(){
+      Body p = new Body();
+      p.x = 8.34336671824457987e+00;
+      p.y = 4.12479856412430479e+00;
+      p.z = -4.03523417114321381e-01;
+      p.vx = -2.76742510726862411e-03 * DAYS_PER_YEAR;
+      p.vy = 4.99852801234917238e-03 * DAYS_PER_YEAR;
+      p.vz = 2.30417297573763929e-05 * DAYS_PER_YEAR;
+      p.mass = 2.85885980666130812e-04 * SOLAR_MASS;
+      return p;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""static Body uranus(){
+      Body p = new Body();
+      p.x = 1.28943695621391310e+01;
+      p.y = -1.51111514016986312e+01;
+      p.z = -2.23307578892655734e-01;
+      p.vx = 2.96460137564761618e-03 * DAYS_PER_YEAR;
+      p.vy = 2.37847173959480950e-03 * DAYS_PER_YEAR;
+      p.vz = -2.96589568540237556e-05 * DAYS_PER_YEAR;
+      p.mass = 4.36624404335156298e-05 * SOLAR_MASS;
+      return p;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""static Body neptune(){
+      Body p = new Body();
+      p.x = 1.53796971148509165e+01;
+      p.y = -2.59193146099879641e+01;
+      p.z = 1.79258772950371181e-01;
+      p.vx = 2.68067772490389322e-03 * DAYS_PER_YEAR;
+      p.vy = 1.62824170038242295e-03 * DAYS_PER_YEAR;
+      p.vz = -9.51592254519715870e-05 * DAYS_PER_YEAR;
+      p.mass = 5.15138902046611451e-05 * SOLAR_MASS;
+      return p;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""static Body sun(){
+      Body p = new Body();
+      p.mass = SOLAR_MASS;
+      return p;
+   }
+
+""", "nbody", "C", 56),
+    (
+"""Body offsetMomentum(double px, double py, double pz){
+      vx = -px / SOLAR_MASS;
+      vy = -py / SOLAR_MASS;
+      vz = -pz / SOLAR_MASS;
+      return this;
+   }
+
+""", "nbody", "C", 56),
+
+    # combinatorial
+    (
+"""private void compose_r(int bq, int br, int bs, int bt)
+   {
+     u.mul(r, bs);
+     r.mul(r, bq);
+     v.mul(t, br);
+     r.add(r, v);
+     t.mul(t, bt);
+     t.add(t, u);
+     s.mul(s, bt);
+     u.mul(q, bs);
+     s.add(s, u);
+     q.mul(q, bq);
+   }
+
+""", "combinatorial", "C", 58),
+    (
+"""private void compose_l(int bq, int br, int bs, int bt)
+   {
+     r.mul(r, bt);
+     u.mul(q, br);
+     r.add(r, u);
+     u.mul(t, bs);
+     t.mul(t, bt);
+     v.mul(s, br);
+     t.add(t, v);
+     s.mul(s, bq);
+     s.add(s, u);
+     q.mul(q, bq);
+   }
+
+""", "combinatorial", "C", 58),
+    (
+"""private int extract(int j)
+   {
+     u.mul(q, j);
+     u.add(u, r);
+     v.mul(s, j);
+     v.add(v, t);
+     w.div(u, v);
+     return w.intValue();
+   }
+
+""", "combinatorial", "C", 58),
+    (
+"""private boolean prdigit(int y)
+   {
+      strBuf.append(y);
+      if (++i % 10 == 0 || i == n) {
+         if (i%10!=0) for (int j=10-(i%10);j>0;j--) { strBuf.append(" "); }
+         strBuf.append("\\t:");
+         strBuf.append(i);
+         System.out.println(strBuf);
+         strBuf = new StringBuffer(20);
+      }
+      return i == n;
+   }
+
+""", "combinatorial", "C", 58),
+    (
+"""if (++i % 10 == 0 || i == n) {
+         if (i%10!=0) for (int j=10-(i%10);j>0;j--) { strBuf.append(" "); }
+         strBuf.append("\\t:");
+         strBuf.append(i);
+         System.out.println(strBuf);
+         strBuf = new StringBuffer(20);
+      }
+
+""", "combinatorial", "C", 58),
+    (
+"""void pidigits()
+   {
+     int k = 1;
+     d = 0;
+     i = 0;
+     q.set(1);
+     r.set(0);
+     s.set(0);
+     t.set(1);
+     for (;;) {
+       int y = extract(3);
+       if (y == extract(4)) {
+         if (prdigit(y)) return;
+         compose_r(10, -10*y, 0, 1);
+       } else {
+         compose_l(k, 4*k+2, 0, 2*k+1);
+         k++;
+       }
+     }
+   }
+
+""", "combinatorial", "C", 58),
+    (
+"""for (;;) {
+       int y = extract(3);
+       if (y == extract(4)) {
+         if (prdigit(y)) return;
+         compose_r(10, -10*y, 0, 1);
+       } else {
+         compose_l(k, 4*k+2, 0, 2*k+1);
+         k++;
+       }
+     }
+
+""", "combinatorial", "C", 58),
+    (
+"""Public methods
+   
+   public GmpInteger() {
+      mpz_init();
+   }
+
+""", "combinatorial", "C", 58),
+    (
+"""private void compose_r(int bq, int br, int bs, int bt)
+   {
+     u.mul(r, bs);
+     r.mul(r, bq);
+     v.mul(t, br);
+     r.add(r, v);
+     t.mul(t, bt);
+     t.add(t, u);
+     s.mul(s, bt);
+     u.mul(q, bs);
+     s.add(s, u);
+     q.mul(q, bq);
+   }
+
+""", "combinatorial", "C", 58),
+    (
+"""private void compose_l(int bq, int br, int bs, int bt)
+   {
+     r.mul(r, bt);
+     u.mul(q, br);
+     r.add(r, u);
+     u.mul(t, bs);
+     t.mul(t, bt);
+     v.mul(s, br);
+     t.add(t, v);
+     s.mul(s, bq);
+     s.add(s, u);
+     q.mul(q, bq);
+   }
+
+""", "combinatorial", "C", 58),
+    (
+"""private int extract(int j)
+   {
+     u.mul(q, j);
+     u.add(u, r);
+     v.mul(s, j);
+     v.add(v, t);
+     w.div(u, v);
+     return w.intValue();
+   }
+
+""", "combinatorial", "C", 58),
+    (
+"""private boolean prdigit(int y)
+   {
+      strBuf.append(y);
+      if (++i % 10 == 0 || i == n) {
+         if (i%10!=0) for (int j=10-(i%10);j>0;j--) { strBuf.append(" "); }
+         strBuf.append("\\t:");
+         strBuf.append(i);
+         System.out.println(strBuf);
+         strBuf = new StringBuffer(20);
+      }
+      return i == n;
+   }
+
+""", "combinatorial", "C", 58),
+    (
+"""if (++i % 10 == 0 || i == n) {
+         if (i%10!=0) for (int j=10-(i%10);j>0;j--) { strBuf.append(" "); }
+         strBuf.append("\\t:");
+         strBuf.append(i);
+         System.out.println(strBuf);
+         strBuf = new StringBuffer(20);
+      }
+
+""", "combinatorial", "C", 58),
+    (
+"""void pidigits()
+   {
+     int k = 1;
+     d = 0;
+     i = 0;
+     q.set(1);
+     r.set(0);
+     s.set(0);
+     t.set(1);
+     for (;;) {
+       int y = extract(3);
+       if (y == extract(4)) {
+         if (prdigit(y)) return;
+         compose_r(10, -10*y, 0, 1);
+       } else {
+         compose_l(k, 4*k+2, 0, 2*k+1);
+         k++;
+       }
+     }
+   }
+
+""", "combinatorial", "C", 58),
+    (
+"""for (;;) {
+       int y = extract(3);
+       if (y == extract(4)) {
+         if (prdigit(y)) return;
+         compose_r(10, -10*y, 0, 1);
+       } else {
+         compose_l(k, 4*k+2, 0, 2*k+1);
+         k++;
+       }
+     }
+
+""", "combinatorial", "C", 58),
+    (
+"""Public methods
+   
+   public GmpInteger() {
+      mpz_init();
+   }
+
+""", "combinatorial", "C", 58),
+
+    # io
+    (
+"""public static void main(String[] args) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    {
+        byte[] buf = new byte[65536];
+        int count;
+        while ((count = System.in.read(buf)) > 0) {
+            baos.write(buf, 0, count);
+        }
+    }
+    final String input = baos.toString("US-ASCII");
+
+    final int initialLength = input.length();
+
+    final String sequence = input.replaceAll(">.*\\n|\\n", "");
+
+    CompletableFuture<String> replacements = CompletableFuture.supplyAsync(() -> {
+        final Map<String, String> iub = new LinkedHashMap<>();
+        iub.put("tHa[Nt]", "<4>");
+        iub.put("aND|caN|Ha[DS]|WaS", "<3>");
+        iub.put("a[NSt]|BY", "<2>");
+        iub.put("<[^>]*>", "|");
+        iub.put("\\\\|[^|][^|]*\\\\|", "-");
+
+        String buffer = sequence;
+        for (Map.Entry<String, String> entry : iub.entrySet()) {
+            buffer = Pattern.compile(entry.getKey()).matcher(buffer).replaceAll(entry.getValue());
+        }
+        return buffer;
+    });
+
+    final int codeLength = sequence.length();
+
+    final List<String> variants = Arrays.asList("agggtaaa|tttaccct",
+                                                "[cgt]gggtaaa|tttaccc[acg]",
+                                                "a[act]ggtaaa|tttacc[agt]t",
+                                                "ag[act]gtaaa|tttac[agt]ct",
+                                                "agg[act]taaa|ttta[agt]cct",
+                                                "aggg[acg]aaa|ttt[cgt]ccct",
+                                                "agggt[cgt]aa|tt[acg]accct",
+                                                "agggta[cgt]a|t[acg]taccct",
+                                                "agggtaa[cgt]|[acg]ttaccct");
+
+    BiFunction<String, String, Entry<String, Long>> counts = (v, s) -> {
+      Long count = Pattern.compile(v).splitAsStream(s).count() - 1; //Off by one
+      return new AbstractMap.SimpleEntry<>(v, count);
+    };
+
+    final Map<String, Long> results = variants.parallelStream()
+                                              .map(variant -> counts.apply(variant, sequence))
+                                              .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+    variants.forEach(variant -> System.out.println(variant + " " + results.get(variant)));
+
+    System.out.println();
+    System.out.println(initialLength);
+    System.out.println(codeLength);
+    System.out.println(replacements.join().length());
+  }
+
+""", "io", "keep", 0),
+    (
+"""public static void main(String[] args) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    {
+        byte[] buf = new byte[65536];
+        int count;
+        while ((count = System.in.read(buf)) > 0) {
+            baos.write(buf, 0, count);
+        }
+    }
+    final String input = baos.toString("US-ASCII");
+
+    final int initialLength = input.length();
+
+    final String sequence = input.replaceAll(">.*\\n|\\n", "");
+
+    CompletableFuture<String> replacements = CompletableFuture.supplyAsync(() -> {
+        final Map<String, String> iub = new LinkedHashMap<>();
+        iub.put("tHa[Nt]", "<4>");
+        iub.put("aND|caN|Ha[DS]|WaS", "<3>");
+        iub.put("a[NSt]|BY", "<2>");
+        iub.put("<[^>]*>", "|");
+        iub.put("\\\\|[^|][^|]*\\\\|", "-");
+
+        String buffer = sequence;
+        for (Map.Entry<String, String> entry : iub.entrySet()) {
+            buffer = Pattern.compile(entry.getKey()).matcher(buffer).replaceAll(entry.getValue());
+        }
+        return buffer;
+    });
+
+    final int codeLength = sequence.length();
+
+    final List<String> variants = Arrays.asList("agggtaaa|tttaccct",
+                                                "[cgt]gggtaaa|tttaccc[acg]",
+                                                "a[act]ggtaaa|tttacc[agt]t",
+                                                "ag[act]gtaaa|tttac[agt]ct",
+                                                "agg[act]taaa|ttta[agt]cct",
+                                                "aggg[acg]aaa|ttt[cgt]ccct",
+                                                "agggt[cgt]aa|tt[acg]accct",
+                                                "agggta[cgt]a|t[acg]taccct",
+                                                "agggtaa[cgt]|[acg]ttaccct");
+
+    BiFunction<String, String, Entry<String, Long>> counts = (v, s) -> {
+      Long count = Pattern.compile(v).splitAsStream(s).count() - 1; //Off by one
+      return new AbstractMap.SimpleEntry<>(v, count);
+    };
+
+    final Map<String, Long> results = variants.parallelStream()
+                                              .map(variant -> counts.apply(variant, sequence))
+                                              .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+    variants.forEach(variant -> System.out.println(variant + " " + results.get(variant)));
+
+    System.out.println();
+    System.out.println(initialLength);
+    System.out.println(codeLength);
+    System.out.println(replacements.join().length());
+  }
+
+""", "io", "keep", 0),
+
+    # hash_set
+    (
+"""public static void main(String[] args) throws IOException
+   {
+      int read;
+      byte[] buffer;
+      Finder lastFinder = null; 
+      
+      do {
+         buffer = new byte[CHUNK_SIZE];
+         read = System.in.read(buffer);
+         list.add(buffer);
+
+         Finder finder = new Finder(buffer, read, lastFinder);
+         service.execute(finder);
+         lastFinder = finder;
+
+      } while (read == CHUNK_SIZE);
+
+      Status status = lastFinder.finish();
+      Mapper mapper = new Mapper(status.lastFinding, status.count - 1, status.lastMapper);
+      service.execute(mapper);
+
+      service.shutdown();
+   }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public Finder(byte[] a, int size, Finder previous)
+      {
+         this.a = a;
+         this.size = size;
+         this.previous = previous;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public Status finish()
+      {
+         while (!done) try {
+            Thread.sleep(1);
+         } catch (InterruptedException e) {
+            // ignored
+         }
+         return status;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public void run()
+      {
+         LinkedList<Integer> findings = new LinkedList<Integer>();
+
+         for (int i = 0; i < size; i++) {
+            if (a[i] == '>') {
+               findings.add(i);
+            }
+         }
+      
+         if (previous == null) {
+            status = new Status();
+         } else {
+            status = previous.finish();
+            findings.add(0, status.lastFinding);
+            for (int i = 1; i < findings.size(); i++) {
+               findings.set(i, findings.get(i) + status.count);
+            }
+         }
+      
+         if (findings.size() > 1) for (int i = 0; i < findings.size() - 1; i++) {
+            status.lastMapper = new Mapper(findings.get(i), findings.get(i + 1) - 1, status.lastMapper);
+            service.execute(status.lastMapper);
+         }
+         
+         status.lastFinding = findings.get(findings.size() - 1);
+         status.count += size;
+         done = true;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""for (int i = 0; i < size; i++) {
+            if (a[i] == '>') {
+               findings.add(i);
+            }
+         }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public Mapper(int start, int end, Mapper previous)
+      {
+         this.end = end;
+         this.start = start;
+         this.previous = previous;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public void finish()
+      {
+         while (!done) try {
+            Thread.sleep(1);
+         } catch (InterruptedException e) {
+            // ignored
+         }
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public void run()
+      {
+         int[] positions = find(list, start, end);
+         
+         int lp1 = positions[0];
+         byte[] tob = list.get(lp1);
+
+         int lp2 = positions[2];
+         byte[] bot = list.get(lp2);
+         
+         int p1 = positions[1];
+         while (tob[p1] != '\\n') p1++;
+
+         int p2 = positions[3];
+      
+         while (lp1 < lp2 || p1 < p2) {
+            if (tob[p1] == '\\n') {
+               p1++;
+            } else if (bot[p2] == '\\n') {
+               p2--;
+            } else {
+               byte tmp = tob[p1];
+               tob[p1] = map[bot[p2]];
+               bot[p2] = map[tmp];
+               p1++;
+               p2--;
+            }
+            if (p1 == tob.length) {
+               lp1++;
+               tob = list.get(lp1);
+               p1 = 0;
+            }
+            if (p2 == -1) {
+               lp2--;
+               bot = list.get(lp2);
+               p2 = bot.length - 1;
+            }
+         }
+
+         if (previous != null) {
+            previous.finish();
+         }
+
+         write(list, positions[0], positions[1], positions[2], positions[3]);
+         done = true;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""while (lp1 < lp2 || p1 < p2) {
+            if (tob[p1] == '\\n') {
+               p1++;
+            } else if (bot[p2] == '\\n') {
+               p2--;
+            } else {
+               byte tmp = tob[p1];
+               tob[p1] = map[bot[p2]];
+               bot[p2] = map[tmp];
+               p1++;
+               p2--;
+            }
+            if (p1 == tob.length) {
+               lp1++;
+               tob = list.get(lp1);
+               p1 = 0;
+            }
+            if (p2 == -1) {
+               lp2--;
+               bot = list.get(lp2);
+               p2 = bot.length - 1;
+            }
+         }
+
+""", "hash_set", "Rust", 58),
+    (
+"""if (p1 == tob.length) {
+               lp1++;
+               tob = list.get(lp1);
+               p1 = 0;
+            }
+
+""", "hash_set", "Rust", 58),
+    (
+"""if (p2 == -1) {
+               lp2--;
+               bot = list.get(lp2);
+               p2 = bot.length - 1;
+            }
+
+""", "hash_set", "Rust", 58),
+    (
+"""private static void write(List<byte[]> list, int lpStart, int start, int lpEnd, int end)
+   {
+      byte[] a = list.get(lpStart);
+      while (lpStart < lpEnd) {
+         System.out.write(a, start, a.length - start);
+         lpStart++;
+         a = list.get(lpStart);
+         start = 0;
+      }
+      System.out.write(a, start, end - start + 1);
+   }
+
+""", "hash_set", "Rust", 58),
+    (
+"""while (lpStart < lpEnd) {
+         System.out.write(a, start, a.length - start);
+         lpStart++;
+         a = list.get(lpStart);
+         start = 0;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""private static int[] find(List<byte[]> list, int start, int end)
+   {
+      int n = 0, lp = 0;
+      int[] result = new int[4];
+      boolean foundStart = false;
+
+      for (byte[] bytes : list) {
+         if (!foundStart && n + bytes.length > start) {
+            result[0] = lp;
+            result[1] = start - n;
+            foundStart = true;
+         }
+         if (foundStart && n + bytes.length > end) {
+            result[2] = lp;
+            result[3] = end - n;
+            break;
+         }
+         n += bytes.length;
+         lp++;
+      }
+      return result;
+   }
+
+""", "hash_set", "Rust", 58),
+    (
+"""for (byte[] bytes : list) {
+         if (!foundStart && n + bytes.length > start) {
+            result[0] = lp;
+            result[1] = start - n;
+            foundStart = true;
+         }
+         if (foundStart && n + bytes.length > end) {
+            result[2] = lp;
+            result[3] = end - n;
+            break;
+         }
+         n += bytes.length;
+         lp++;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""if (!foundStart && n + bytes.length > start) {
+            result[0] = lp;
+            result[1] = start - n;
+            foundStart = true;
+         }
+
+""", "hash_set", "Rust", 58),
+    (
+"""if (foundStart && n + bytes.length > end) {
+            result[2] = lp;
+            result[3] = end - n;
+            break;
+         }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static void main(String[] args) throws IOException
+   {
+      int read;
+      byte[] buffer;
+      Finder lastFinder = null; 
+      
+      do {
+         buffer = new byte[CHUNK_SIZE];
+         read = System.in.read(buffer);
+         list.add(buffer);
+
+         Finder finder = new Finder(buffer, read, lastFinder);
+         service.execute(finder);
+         lastFinder = finder;
+
+      } while (read == CHUNK_SIZE);
+
+      Status status = lastFinder.finish();
+      Mapper mapper = new Mapper(status.lastFinding, status.count - 1, status.lastMapper);
+      service.execute(mapper);
+
+      service.shutdown();
+   }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public Finder(byte[] a, int size, Finder previous)
+      {
+         this.a = a;
+         this.size = size;
+         this.previous = previous;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public Status finish()
+      {
+         while (!done) try {
+            Thread.sleep(1);
+         } catch (InterruptedException e) {
+            // ignored
+         }
+         return status;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public void run()
+      {
+         LinkedList<Integer> findings = new LinkedList<Integer>();
+
+         for (int i = 0; i < size; i++) {
+            if (a[i] == '>') {
+               findings.add(i);
+            }
+         }
+      
+         if (previous == null) {
+            status = new Status();
+         } else {
+            status = previous.finish();
+            findings.add(0, status.lastFinding);
+            for (int i = 1; i < findings.size(); i++) {
+               findings.set(i, findings.get(i) + status.count);
+            }
+         }
+      
+         if (findings.size() > 1) for (int i = 0; i < findings.size() - 1; i++) {
+            status.lastMapper = new Mapper(findings.get(i), findings.get(i + 1) - 1, status.lastMapper);
+            service.execute(status.lastMapper);
+         }
+         
+         status.lastFinding = findings.get(findings.size() - 1);
+         status.count += size;
+         done = true;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""for (int i = 0; i < size; i++) {
+            if (a[i] == '>') {
+               findings.add(i);
+            }
+         }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public Mapper(int start, int end, Mapper previous)
+      {
+         this.end = end;
+         this.start = start;
+         this.previous = previous;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public void finish()
+      {
+         while (!done) try {
+            Thread.sleep(1);
+         } catch (InterruptedException e) {
+            // ignored
+         }
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public void run()
+      {
+         int[] positions = find(list, start, end);
+         
+         int lp1 = positions[0];
+         byte[] tob = list.get(lp1);
+
+         int lp2 = positions[2];
+         byte[] bot = list.get(lp2);
+         
+         int p1 = positions[1];
+         while (tob[p1] != '\\n') p1++;
+
+         int p2 = positions[3];
+      
+         while (lp1 < lp2 || p1 < p2) {
+            if (tob[p1] == '\\n') {
+               p1++;
+            } else if (bot[p2] == '\\n') {
+               p2--;
+            } else {
+               byte tmp = tob[p1];
+               tob[p1] = map[bot[p2]];
+               bot[p2] = map[tmp];
+               p1++;
+               p2--;
+            }
+            if (p1 == tob.length) {
+               lp1++;
+               tob = list.get(lp1);
+               p1 = 0;
+            }
+            if (p2 == -1) {
+               lp2--;
+               bot = list.get(lp2);
+               p2 = bot.length - 1;
+            }
+         }
+
+         if (previous != null) {
+            previous.finish();
+         }
+
+         write(list, positions[0], positions[1], positions[2], positions[3]);
+         done = true;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""while (lp1 < lp2 || p1 < p2) {
+            if (tob[p1] == '\\n') {
+               p1++;
+            } else if (bot[p2] == '\\n') {
+               p2--;
+            } else {
+               byte tmp = tob[p1];
+               tob[p1] = map[bot[p2]];
+               bot[p2] = map[tmp];
+               p1++;
+               p2--;
+            }
+            if (p1 == tob.length) {
+               lp1++;
+               tob = list.get(lp1);
+               p1 = 0;
+            }
+            if (p2 == -1) {
+               lp2--;
+               bot = list.get(lp2);
+               p2 = bot.length - 1;
+            }
+         }
+
+""", "hash_set", "Rust", 58),
+    (
+"""if (p1 == tob.length) {
+               lp1++;
+               tob = list.get(lp1);
+               p1 = 0;
+            }
+
+""", "hash_set", "Rust", 58),
+    (
+"""if (p2 == -1) {
+               lp2--;
+               bot = list.get(lp2);
+               p2 = bot.length - 1;
+            }
+
+""", "hash_set", "Rust", 58),
+    (
+"""private static void write(List<byte[]> list, int lpStart, int start, int lpEnd, int end)
+   {
+      byte[] a = list.get(lpStart);
+      while (lpStart < lpEnd) {
+         System.out.write(a, start, a.length - start);
+         lpStart++;
+         a = list.get(lpStart);
+         start = 0;
+      }
+      System.out.write(a, start, end - start + 1);
+   }
+
+""", "hash_set", "Rust", 58),
+    (
+"""while (lpStart < lpEnd) {
+         System.out.write(a, start, a.length - start);
+         lpStart++;
+         a = list.get(lpStart);
+         start = 0;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""private static int[] find(List<byte[]> list, int start, int end)
+   {
+      int n = 0, lp = 0;
+      int[] result = new int[4];
+      boolean foundStart = false;
+
+      for (byte[] bytes : list) {
+         if (!foundStart && n + bytes.length > start) {
+            result[0] = lp;
+            result[1] = start - n;
+            foundStart = true;
+         }
+         if (foundStart && n + bytes.length > end) {
+            result[2] = lp;
+            result[3] = end - n;
+            break;
+         }
+         n += bytes.length;
+         lp++;
+      }
+      return result;
+   }
+
+""", "hash_set", "Rust", 58),
+    (
+"""for (byte[] bytes : list) {
+         if (!foundStart && n + bytes.length > start) {
+            result[0] = lp;
+            result[1] = start - n;
+            foundStart = true;
+         }
+         if (foundStart && n + bytes.length > end) {
+            result[2] = lp;
+            result[3] = end - n;
+            break;
+         }
+         n += bytes.length;
+         lp++;
+      }
+
+""", "hash_set", "Rust", 58),
+    (
+"""if (!foundStart && n + bytes.length > start) {
+            result[0] = lp;
+            result[1] = start - n;
+            foundStart = true;
+         }
+
+""", "hash_set", "Rust", 58),
+    (
+"""if (foundStart && n + bytes.length > end) {
+            result[2] = lp;
+            result[3] = end - n;
+            break;
+         }
+
+""", "hash_set", "Rust", 58),
+
+    # matrix
+    (
+"""public static void main (String[] args)
+    {
+        int n = 1000;
+        if (args.length > 0) n = Integer.parseInt (args[0]);
+        
+        System.out.println (formatter.format (spectralnormGame (n)) );
+    }
+
+""", "matrix", "C", 56),
+    (
+"""private static final double spectralnormGame (int n)
+    {
+        // create unit vector
+        double[] u = new double[n];
+        double[] v = new double[n];
+        double[] tmp = new double[n];
+        
+        for (int i = 0; i < n; i++)
+            u[i] = 1.0;
+        
+        // get available processor, then set up syn object
+        int nthread = Runtime.getRuntime ().availableProcessors ();
+        Approximate.barrier = new CyclicBarrier (nthread);
+        
+        int chunk = n / nthread;
+        Approximate[] ap = new Approximate[nthread];
+        
+        for (int i = 0; i < nthread; i++)
+        {
+            int r1 = i * chunk;
+            int r2 = (i < (nthread -1)) ? r1 + chunk : n;
+            
+            ap[i] = new Approximate (u, v, tmp, r1, r2);
+        }
+        
+        
+        double vBv = 0, vv = 0;
+        for (int i = 0; i < nthread; i++)
+        {
+            try
+            {
+                ap[i].join ();
+                
+                vBv += ap[i].m_vBv;
+                vv += ap[i].m_vv;
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace ();
+            }
+        }
+        
+        return Math.sqrt (vBv/vv);
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = 0; i < nthread; i++)
+        {
+            int r1 = i * chunk;
+            int r2 = (i < (nthread -1)) ? r1 + chunk : n;
+            
+            ap[i] = new Approximate (u, v, tmp, r1, r2);
+        }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = 0; i < nthread; i++)
+        {
+            try
+            {
+                ap[i].join ();
+                
+                vBv += ap[i].m_vBv;
+                vv += ap[i].m_vv;
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace ();
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""public Approximate (double[] u, double[] v, double[] tmp, int rbegin, int rend)
+        {
+            super ();
+            
+            _u = u;
+            _v = v;
+            _tmp = tmp;
+            
+            range_begin = rbegin;
+            range_end = rend;
+            
+            start ();
+        }
+
+""", "matrix", "C", 56),
+    (
+"""public void run ()
+        {
+            // 20 steps of the power method
+            for (int i = 0; i < 10; i++)
+            {
+                MultiplyAtAv (_u, _tmp, _v);
+                MultiplyAtAv (_v, _tmp, _u);
+            }
+            
+            for (int i = range_begin; i < range_end; i++)
+            {
+                m_vBv += _u[i] * _v[i];
+                m_vv  += _v[i] * _v[i];
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""20 steps of the power method
+            for (int i = 0; i < 10; i++)
+            {
+                MultiplyAtAv (_u, _tmp, _v);
+                MultiplyAtAv (_v, _tmp, _u);
+            }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = range_begin; i < range_end; i++)
+            {
+                m_vBv += _u[i] * _v[i];
+                m_vv  += _v[i] * _v[i];
+            }
+
+""", "matrix", "C", 56),
+    (
+"""private final static double eval_A (int i, int j)
+        {
+            int div = ( ((i+j) * (i+j+1) >>> 1) +i+1 );
+            return 1.0 / div;
+        }
+
+""", "matrix", "C", 56),
+    (
+"""private final void MultiplyAv (final double[] v, double[] Av)
+        {
+            for (int i = range_begin; i < range_end; i++)
+            {
+                double sum = 0;
+                for (int j = 0; j < v.length; j++)
+                    sum += eval_A (i, j) * v[j];
+                
+                Av[i] = sum;
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = range_begin; i < range_end; i++)
+            {
+                double sum = 0;
+                for (int j = 0; j < v.length; j++)
+                    sum += eval_A (i, j) * v[j];
+                
+                Av[i] = sum;
+            }
+
+""", "matrix", "C", 56),
+    (
+"""private final void MultiplyAtv (final double[] v, double[] Atv)
+        {
+            for (int i = range_begin; i < range_end; i++)
+            {
+                double sum = 0;
+                for (int j = 0; j < v.length; j++)
+                    sum += eval_A (j, i) * v[j];
+                
+                Atv[i] = sum;
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = range_begin; i < range_end; i++)
+            {
+                double sum = 0;
+                for (int j = 0; j < v.length; j++)
+                    sum += eval_A (j, i) * v[j];
+                
+                Atv[i] = sum;
+            }
+
+""", "matrix", "C", 56),
+    (
+"""private final void MultiplyAtAv (final double[] v, double[] tmp, double[] AtAv)
+        {
+            try
+            {
+                MultiplyAv (v, tmp);
+                // all thread must syn at completion
+                barrier.await ();
+                MultiplyAtv (tmp, AtAv);
+                // all thread must syn at completion
+                barrier.await ();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace ();
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""public static void main (String[] args)
+    {
+        int n = 1000;
+        if (args.length > 0) n = Integer.parseInt (args[0]);
+        
+        System.out.println (formatter.format (spectralnormGame (n)) );
+    }
+
+""", "matrix", "C", 56),
+    (
+"""private static final double spectralnormGame (int n)
+    {
+        // create unit vector
+        double[] u = new double[n];
+        double[] v = new double[n];
+        double[] tmp = new double[n];
+        
+        for (int i = 0; i < n; i++)
+            u[i] = 1.0;
+        
+        // get available processor, then set up syn object
+        int nthread = Runtime.getRuntime ().availableProcessors ();
+        Approximate.barrier = new CyclicBarrier (nthread);
+        
+        int chunk = n / nthread;
+        Approximate[] ap = new Approximate[nthread];
+        
+        for (int i = 0; i < nthread; i++)
+        {
+            int r1 = i * chunk;
+            int r2 = (i < (nthread -1)) ? r1 + chunk : n;
+            
+            ap[i] = new Approximate (u, v, tmp, r1, r2);
+        }
+        
+        
+        double vBv = 0, vv = 0;
+        for (int i = 0; i < nthread; i++)
+        {
+            try
+            {
+                ap[i].join ();
+                
+                vBv += ap[i].m_vBv;
+                vv += ap[i].m_vv;
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace ();
+            }
+        }
+        
+        return Math.sqrt (vBv/vv);
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = 0; i < nthread; i++)
+        {
+            int r1 = i * chunk;
+            int r2 = (i < (nthread -1)) ? r1 + chunk : n;
+            
+            ap[i] = new Approximate (u, v, tmp, r1, r2);
+        }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = 0; i < nthread; i++)
+        {
+            try
+            {
+                ap[i].join ();
+                
+                vBv += ap[i].m_vBv;
+                vv += ap[i].m_vv;
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace ();
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""public Approximate (double[] u, double[] v, double[] tmp, int rbegin, int rend)
+        {
+            super ();
+            
+            _u = u;
+            _v = v;
+            _tmp = tmp;
+            
+            range_begin = rbegin;
+            range_end = rend;
+            
+            start ();
+        }
+
+""", "matrix", "C", 56),
+    (
+"""public void run ()
+        {
+            // 20 steps of the power method
+            for (int i = 0; i < 10; i++)
+            {
+                MultiplyAtAv (_u, _tmp, _v);
+                MultiplyAtAv (_v, _tmp, _u);
+            }
+            
+            for (int i = range_begin; i < range_end; i++)
+            {
+                m_vBv += _u[i] * _v[i];
+                m_vv  += _v[i] * _v[i];
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""20 steps of the power method
+            for (int i = 0; i < 10; i++)
+            {
+                MultiplyAtAv (_u, _tmp, _v);
+                MultiplyAtAv (_v, _tmp, _u);
+            }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = range_begin; i < range_end; i++)
+            {
+                m_vBv += _u[i] * _v[i];
+                m_vv  += _v[i] * _v[i];
+            }
+
+""", "matrix", "C", 56),
+    (
+"""private final static double eval_A (int i, int j)
+        {
+            int div = ( ((i+j) * (i+j+1) >>> 1) +i+1 );
+            return 1.0 / div;
+        }
+
+""", "matrix", "C", 56),
+    (
+"""private final void MultiplyAv (final double[] v, double[] Av)
+        {
+            for (int i = range_begin; i < range_end; i++)
+            {
+                double sum = 0;
+                for (int j = 0; j < v.length; j++)
+                    sum += eval_A (i, j) * v[j];
+                
+                Av[i] = sum;
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = range_begin; i < range_end; i++)
+            {
+                double sum = 0;
+                for (int j = 0; j < v.length; j++)
+                    sum += eval_A (i, j) * v[j];
+                
+                Av[i] = sum;
+            }
+
+""", "matrix", "C", 56),
+    (
+"""private final void MultiplyAtv (final double[] v, double[] Atv)
+        {
+            for (int i = range_begin; i < range_end; i++)
+            {
+                double sum = 0;
+                for (int j = 0; j < v.length; j++)
+                    sum += eval_A (j, i) * v[j];
+                
+                Atv[i] = sum;
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = range_begin; i < range_end; i++)
+            {
+                double sum = 0;
+                for (int j = 0; j < v.length; j++)
+                    sum += eval_A (j, i) * v[j];
+                
+                Atv[i] = sum;
+            }
+
+""", "matrix", "C", 56),
+    (
+"""private final void MultiplyAtAv (final double[] v, double[] tmp, double[] AtAv)
+        {
+            try
+            {
+                MultiplyAv (v, tmp);
+                // all thread must syn at completion
+                barrier.await ();
+                MultiplyAtv (tmp, AtAv);
+                // all thread must syn at completion
+                barrier.await ();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace ();
+            }
+        }
+
+""", "matrix", "C", 56),
+
+    # sorting
+    (
+"""super E>> void bubbleSort(E[] comparable) {
+    boolean changed = false;
+    do {
+        changed = false;
+        for (int a = 0; a < comparable.length - 1; a++) {
+            if (comparable[a].compareTo(comparable[a + 1]) > 0) {
+                E tmp = comparable[a];
+                comparable[a] = comparable[a + 1];
+                comparable[a + 1] = tmp;
+                changed = true;
+            }
+        }
+    } while (changed);
+}
+
+""", "sorting", "C", 52),
+    (
+"""for (int a = 0; a < comparable.length - 1; a++) {
+            if (comparable[a].compareTo(comparable[a + 1]) > 0) {
+                E tmp = comparable[a];
+                comparable[a] = comparable[a + 1];
+                comparable[a + 1] = tmp;
+                changed = true;
+            }
+        }
+
+""", "sorting", "C", 52),
+    (
+"""function() {
+    var done = false;
+    while (!done) {
+        done = true;
+        for (var i = 1; i<this.length; i++) {
+            if (this[i-1] > this[i]) {
+                done = false;
+                [this[i-1], this[i]] = [this[i], this[i-1]]
+            }
+        }
+    }
+    return this;
+}
+
+""", "sorting", "C", 52),
+    (
+"""while (!done) {
+        done = true;
+        for (var i = 1; i<this.length; i++) {
+            if (this[i-1] > this[i]) {
+                done = false;
+                [this[i-1], this[i]] = [this[i], this[i-1]]
+            }
+        }
+    }
+
+""", "sorting", "C", 52),
+    (
+"""for (var i = 1; i<this.length; i++) {
+            if (this[i-1] > this[i]) {
+                done = false;
+                [this[i-1], this[i]] = [this[i], this[i-1]]
+            }
+        }
+
+""", "sorting", "C", 52),
+    (
+"""function() {
+  var done = false;
+  while (! done) {
+    done = true;
+    for (var i = 1; i < this.length; i++) {
+      if (this[i - 1] > this[i]) {
+        done = false;
+        var tmp = this[i - 1];
+        this[i - 1] = this[i];
+        this[i] = tmp;
+      }
+    }
+  }
+  return this;
+}
+
+""", "sorting", "C", 52),
+    (
+"""while (! done) {
+    done = true;
+    for (var i = 1; i < this.length; i++) {
+      if (this[i - 1] > this[i]) {
+        done = false;
+        var tmp = this[i - 1];
+        this[i - 1] = this[i];
+        this[i] = tmp;
+      }
+    }
+  }
+
+""", "sorting", "C", 52),
+    (
+"""for (var i = 1; i < this.length; i++) {
+      if (this[i - 1] > this[i]) {
+        done = false;
+        var tmp = this[i - 1];
+        this[i - 1] = this[i];
+        this[i] = tmp;
+      }
+    }
+
+""", "sorting", "C", 52),
+    (
+"""if (this[i - 1] > this[i]) {
+        done = false;
+        var tmp = this[i - 1];
+        this[i - 1] = this[i];
+        this[i] = tmp;
+      }
+
+""", "sorting", "C", 52),
+    (
+"""function() {
+    var done = false;
+    while (!done) {
+        done = true;
+        for (var i = 1; i<this.length; i++) {
+            if (this[i-1] > this[i]) {
+                done = false;
+                [this[i-1], this[i]] = [this[i], this[i-1]]
+            }
+        }
+    }
+    return this;
+}
+
+""", "sorting", "C", 52),
+    (
+"""while (!done) {
+        done = true;
+        for (var i = 1; i<this.length; i++) {
+            if (this[i-1] > this[i]) {
+                done = false;
+                [this[i-1], this[i]] = [this[i], this[i-1]]
+            }
+        }
+    }
+
+""", "sorting", "C", 52),
+    (
+"""for (var i = 1; i<this.length; i++) {
+            if (this[i-1] > this[i]) {
+                done = false;
+                [this[i-1], this[i]] = [this[i], this[i-1]]
+            }
+        }
+
+""", "sorting", "C", 52),
+    (
+"""super E>> List<E> mergeSort(List<E> m){
+        if(m.size() <= 1) return m;
+
+        int middle = m.size() / 2;
+        List<E> left = m.subList(0, middle);
+        List<E> right = m.subList(middle, m.size());
+
+        right = mergeSort(right);
+        left = mergeSort(left);
+        List<E> result = merge(left, right);
+
+        return result;
+    }
+
+""", "sorting", "C", 52),
+    (
+"""super E>> List<E> merge(List<E> left, List<E> right){
+        List<E> result = new ArrayList<E>();
+        Iterator<E> it1 = left.iterator();
+        Iterator<E> it2 = right.iterator();
+
+	E x = it1.next();
+	E y = it2.next();
+        while (true){
+            //change the direction of this comparison to change the direction of the sort
+            if(x.compareTo(y) <= 0){
+		result.add(x);
+		if(it1.hasNext()){
+		    x = it1.next();
+		}else{
+		    result.add(y);
+		    while(it2.hasNext()){
+			result.add(it2.next());
+		    }
+		    break;
+		}
+	    }else{
+		result.add(y);
+		if(it2.hasNext()){
+		    y = it2.next();
+		}else{
+		    result.add(x);
+		    while (it1.hasNext()){
+			result.add(it1.next());
+		    }
+		    break;
+		}
+	    }
+        }
+        return result;
+    }
+
+""", "sorting", "C", 52),
+    (
+"""while (true){
+            //change the direction of this comparison to change the direction of the sort
+            if(x.compareTo(y) <= 0){
+		result.add(x);
+		if(it1.hasNext()){
+		    x = it1.next();
+		}else{
+		    result.add(y);
+		    while(it2.hasNext()){
+			result.add(it2.next());
+		    }
+		    break;
+		}
+	    }else{
+		result.add(y);
+		if(it2.hasNext()){
+		    y = it2.next();
+		}else{
+		    result.add(x);
+		    while (it1.hasNext()){
+			result.add(it1.next());
+		    }
+		    break;
+		}
+	    }
+        }
+
+""", "sorting", "C", 52),
+    (
+"""mergeSort(v) {
+    if (v.length <= 1) {
+        return v;
+    }
+
+    let m = Math.floor(v.length / 2);
+    let l = mergeSort(v.slice(0, m));
+    let r = mergeSort(v.slice(m));
+    return merge(l, r);
+
+    function merge(a, b) {
+        let i = 0, j = 0;
+        let n = a.length + b.length;
+        let c = [];
+        while (c.length < n) {
+            if (i < a.length && (j >= b.length || a[i] < b[j])) {
+                c.push(a[i++]);
+            } else {
+                c.push(b[j++]);
+            }
+        }
+        return c;
+    }
+}
+
+""", "sorting", "C", 52),
+    (
+"""function merge(a, b) {
+        let i = 0, j = 0;
+        let n = a.length + b.length;
+        let c = [];
+        while (c.length < n) {
+            if (i < a.length && (j >= b.length || a[i] < b[j])) {
+                c.push(a[i++]);
+            } else {
+                c.push(b[j++]);
+            }
+        }
+        return c;
+    }
+
+""", "sorting", "C", 52),
+    (
+"""while (c.length < n) {
+            if (i < a.length && (j >= b.length || a[i] < b[j])) {
+                c.push(a[i++]);
+            } else {
+                c.push(b[j++]);
+            }
+        }
+
+""", "sorting", "C", 52),
+    (
+"""function mergeSortInPlace(v) {
+    if (v.length <= 1) {
+        return;
+    }
+
+    let m = Math.floor(v.length / 2);
+    let l = v.slice(0, m);
+    let r = v.slice(m);
+    mergeSortInPlace(l);
+    mergeSortInPlace(r);
+    merge(l, r, v);
+
+    // merge a + b -> c
+    function merge(a, b, c) {
+        let i = 0, j = 0;
+        for (let k = 0; k < c.length; k++) {
+            if (i < a.length && (j >= b.length || a[i] < b[j])) {
+                c[k] = a[i++];
+            } else {
+                c[k] = b[j++];
+            }
+        }
+    }
+}
+
+""", "sorting", "C", 52),
+    (
+"""c
+    function merge(a, b, c) {
+        let i = 0, j = 0;
+        for (let k = 0; k < c.length; k++) {
+            if (i < a.length && (j >= b.length || a[i] < b[j])) {
+                c[k] = a[i++];
+            } else {
+                c[k] = b[j++];
+            }
+        }
+    }
+
+""", "sorting", "C", 52),
+    (
+"""for (let k = 0; k < c.length; k++) {
+            if (i < a.length && (j >= b.length || a[i] < b[j])) {
+                c[k] = a[i++];
+            } else {
+                c[k] = b[j++];
+            }
+        }
+
+""", "sorting", "C", 52),
+    (
+"""even faster
+function mergeSortInPlaceFast(v) {
+    sort(v, 0, v.length, v.slice());
+
+    function sort(v, lo, hi, t) {
+        let n = hi - lo;
+        if (n <= 1) {
+            return;
+        }
+        let mid = lo + Math.floor(n / 2);
+        sort(v, lo, mid, t);
+        sort(v, mid, hi, t);
+        for (let i = lo; i < hi; i++) {
+            t[i] = v[i];
+        }
+        let i = lo, j = mid;
+        for (let k = lo; k < hi; k++) {
+            if (i < mid && (j >= hi || t[i] < t[j])) {
+                v[k] = t[i++];
+            } else {
+                v[k] = t[j++];
+            }
+        }
+    }
+}
+
+""", "sorting", "C", 52),
+    (
+"""function sort(v, lo, hi, t) {
+        let n = hi - lo;
+        if (n <= 1) {
+            return;
+        }
+        let mid = lo + Math.floor(n / 2);
+        sort(v, lo, mid, t);
+        sort(v, mid, hi, t);
+        for (let i = lo; i < hi; i++) {
+            t[i] = v[i];
+        }
+        let i = lo, j = mid;
+        for (let k = lo; k < hi; k++) {
+            if (i < mid && (j >= hi || t[i] < t[j])) {
+                v[k] = t[i++];
+            } else {
+                v[k] = t[j++];
+            }
+        }
+    }
+
+""", "sorting", "C", 52),
+    (
+"""for (let k = lo; k < hi; k++) {
+            if (i < mid && (j >= hi || t[i] < t[j])) {
+                v[k] = t[i++];
+            } else {
+                v[k] = t[j++];
+            }
+        }
+
+""", "sorting", "C", 52),
+    (
+"""merge(left, right, arr) {
+  var a = 0;
+
+  while (left.length && right.length) {
+    arr[a++] = (right[0] < left[0]) ? right.shift() : left.shift();
+  }
+  while (left.length) {
+    arr[a++] = left.shift();
+  }
+  while (right.length) {
+    arr[a++] = right.shift();
+  }
+}
+
+""", "sorting", "C", 52),
+    (
+"""function mergeSort(arr) {
+  var len = arr.length;
+
+  if (len === 1) { return; }
+
+  var mid = Math.floor(len / 2),
+      left = arr.slice(0, mid),
+      right = arr.slice(mid);
+
+  mergeSort(left);
+  mergeSort(right);
+  merge(left, right, arr);
+}
+
+""", "sorting", "C", 52),
+    (
+"""function mergeSort2(a) {
+  if (a.length <= 1) return
+  const mid = Math.floor(a.length / 2), left = a.slice(0, mid), right = a.slice(mid)
+  mergeSort2(left)
+  mergeSort2(right)
+  let ia = 0, il = 0, ir = 0
+  while (il < left.length && ir < right.length)
+    a[ia++] = left[il] < right[ir] ? left[il++] : right[ir++]
+  while (il < left.length)
+    a[ia++] = left[il++]
+  while (ir < right.length)
+    a[ia++] = right[ir++]
+}
+
+""", "sorting", "C", 52),
+    (
+"""super E>> List<E> quickSort(List<E> arr) {
+    if (arr.isEmpty())
+        return arr;
+    else {
+        E pivot = arr.get(0);
+
+        List<E> less = new LinkedList<E>();
+        List<E> pivotList = new LinkedList<E>();
+        List<E> more = new LinkedList<E>();
+
+        // Partition
+        for (E i: arr) {
+            if (i.compareTo(pivot) < 0)
+                less.add(i);
+            else if (i.compareTo(pivot) > 0)
+                more.add(i);
+            else
+                pivotList.add(i);
+        }
+
+        // Recursively sort sublists
+        less = quickSort(less);
+        more = quickSort(more);
+
+        // Concatenate results
+        less.addAll(pivotList);
+        less.addAll(more);
+        return less;
+    }
+}
+
+""", "sorting", "C", 52),
+    (
+"""Partition
+        for (E i: arr) {
+            if (i.compareTo(pivot) < 0)
+                less.add(i);
+            else if (i.compareTo(pivot) > 0)
+                more.add(i);
+            else
+                pivotList.add(i);
+        }
+
+""", "sorting", "C", 52),
+    (
+"""public static <E extends Comparable<E>> List<E> sort(List<E> col) {
+    if (col == null || col.isEmpty())
+        return Collections.emptyList();
+    else {
+        E pivot = col.get(0);
+        Map<Integer, List<E>> grouped = col.stream()
+                .collect(Collectors.groupingBy(pivot::compareTo));
+        return Stream.of(sort(grouped.get(1)), grouped.get(0), sort(grouped.get(-1)))
+                .flatMap(Collection::stream).collect(Collectors.toList());
+    }
+}
+
+""", "sorting", "C", 52),
+    (
+"""sort(array, less) {
+
+  function swap(i, j) {
+    var t = array[i];
+    array[i] = array[j];
+    array[j] = t;
+  }
+
+  function quicksort(left, right) {
+
+    if (left < right) {
+      var pivot = array[left + Math.floor((right - left) / 2)],
+          left_new = left,
+          right_new = right;
+
+      do {
+        while (less(array[left_new], pivot)) {
+          left_new += 1;
+        }
+        while (less(pivot, array[right_new])) {
+          right_new -= 1;
+        }
+        if (left_new <= right_new) {
+          swap(left_new, right_new);
+          left_new += 1;
+          right_new -= 1;
+        }
+      } while (left_new <= right_new);
+
+      quicksort(left, right_new);
+      quicksort(left_new, right);
+
+    }
+  }
+
+  quicksort(0, array.length - 1);
+
+  return array;
+}
+
+""", "sorting", "C", 52),
+    (
+"""function swap(i, j) {
+    var t = array[i];
+    array[i] = array[j];
+    array[j] = t;
+  }
+
+""", "sorting", "C", 52),
+    (
+"""function quicksort(left, right) {
+
+    if (left < right) {
+      var pivot = array[left + Math.floor((right - left) / 2)],
+          left_new = left,
+          right_new = right;
+
+      do {
+        while (less(array[left_new], pivot)) {
+          left_new += 1;
+        }
+        while (less(pivot, array[right_new])) {
+          right_new -= 1;
+        }
+        if (left_new <= right_new) {
+          swap(left_new, right_new);
+          left_new += 1;
+          right_new -= 1;
+        }
+      } while (left_new <= right_new);
+
+      quicksort(left, right_new);
+      quicksort(left_new, right);
+
+    }
+  }
+
+""", "sorting", "C", 52),
+    (
+"""if (left < right) {
+      var pivot = array[left + Math.floor((right - left) / 2)],
+          left_new = left,
+          right_new = right;
+
+      do {
+        while (less(array[left_new], pivot)) {
+          left_new += 1;
+        }
+        while (less(pivot, array[right_new])) {
+          right_new -= 1;
+        }
+        if (left_new <= right_new) {
+          swap(left_new, right_new);
+          left_new += 1;
+          right_new -= 1;
+        }
+      } while (left_new <= right_new);
+
+      quicksort(left, right_new);
+      quicksort(left_new, right);
+
+    }
+
+""", "sorting", "C", 52),
+    (
+"""if (left_new <= right_new) {
+          swap(left_new, right_new);
+          left_new += 1;
+          right_new -= 1;
+        }
+
+""", "sorting", "C", 52),
+    (
+"""const qsort = ([pivot, ...others]) => 
+  pivot === void 0 ? [] : [
+    ...qsort(others.filter(n => n < pivot)),
+    pivot,
+    ...qsort(others.filter(n => n >= pivot))
+  ];
+
+qsort( [ 11.8, 14.1, 21.3, 8.5, 16.7, 5.7 ] )
+
+""", "sorting", "C", 52),
+    (
+"""qsort( xs ){
+  return xs.length === 0 ? [] : [].concat(
+    qsort( xs.slice(1).filter(function(x){ return x< xs[0] })),
+    xs[0],
+    qsort( xs.slice(1).filter(function(x){ return x>= xs[0] }))
+  )
+}
+
+""", "sorting", "C", 52),
+    (
+"""public static void heapSort(int[] a){
+	int count = a.length;
+
+	//first place a in max-heap order
+	heapify(a, count);
+
+	int end = count - 1;
+	while(end > 0){
+		//swap the root(maximum value) of the heap with the
+		//last element of the heap
+		int tmp = a[end];
+		a[end] = a[0];
+		a[0] = tmp;
+		//put the heap back in max-heap order
+		siftDown(a, 0, end - 1);
+		//decrement the size of the heap so that the previous
+		//max value will stay in its proper place
+		end--;
+	}
+}
+
+""", "sorting", "C", 52),
+    (
+"""while(end > 0){
+		//swap the root(maximum value) of the heap with the
+		//last element of the heap
+		int tmp = a[end];
+		a[end] = a[0];
+		a[0] = tmp;
+		//put the heap back in max-heap order
+		siftDown(a, 0, end - 1);
+		//decrement the size of the heap so that the previous
+		//max value will stay in its proper place
+		end--;
+	}
+
+""", "sorting", "C", 52),
+    (
+"""public static void heapify(int[] a, int count){
+	//start is assigned the index in a of the last parent node
+	int start = (count - 2) / 2; //binary heap
+
+	while(start >= 0){
+		//sift down the node at index start to the proper place
+		//such that all nodes below the start index are in heap
+		//order
+		siftDown(a, start, count - 1);
+		start--;
+	}
+	//after sifting down the root all nodes/elements are in heap order
+}
+
+""", "sorting", "C", 52),
+    (
+"""heap
+
+	while(start >= 0){
+		//sift down the node at index start to the proper place
+		//such that all nodes below the start index are in heap
+		//order
+		siftDown(a, start, count - 1);
+		start--;
+	}
+
+""", "sorting", "C", 52),
+    (
+"""public static void siftDown(int[] a, int start, int end){
+	//end represents the limit of how far down the heap to sift
+	int root = start;
+
+	while((root * 2 + 1) <= end){      //While the root has at least one child
+		int child = root * 2 + 1;           //root*2+1 points to the left child
+		//if the child has a sibling and the child's value is less than its sibling's...
+		if(child + 1 <= end && a[child] < a[child + 1])
+			child = child + 1;           //... then point to the right child instead
+		if(a[root] < a[child]){     //out of max-heap order
+			int tmp = a[root];
+			a[root] = a[child];
+			a[child] = tmp;
+			root = child;                //repeat to continue sifting down the child now
+		}else
+			return;
+	}
+}
+
+""", "sorting", "C", 52),
+    (
+"""then point to the right child instead
+		if(a[root] < a[child]){     //out of max-heap order
+			int tmp = a[root];
+			a[root] = a[child];
+			a[child] = tmp;
+			root = child;                //repeat to continue sifting down the child now
+		}
+
+""", "sorting", "C", 52),
+    (
+"""heapSort(arr) {
+    heapify(arr)
+    end = arr.length - 1
+    while (end > 0) {
+        [arr[end], arr[0]] = [arr[0], arr[end]]
+        end--
+        siftDown(arr, 0, end)
+    }
+}
+
+""", "sorting", "C", 52),
+    (
+"""1
+    while (end > 0) {
+        [arr[end], arr[0]] = [arr[0], arr[end]]
+        end--
+        siftDown(arr, 0, end)
+    }
+
+""", "sorting", "C", 52),
+    (
+"""function heapify(arr) {
+    start = Math.floor(arr.length/2) - 1
+
+    while (start >= 0) {
+        siftDown(arr, start, arr.length - 1)
+        start--
+    }
+}
+
+""", "sorting", "C", 52),
+    (
+"""1
+
+    while (start >= 0) {
+        siftDown(arr, start, arr.length - 1)
+        start--
+    }
+
+""", "sorting", "C", 52),
+    (
+"""function siftDown(arr, startPos, endPos) {
+    let rootPos = startPos
+
+    while (rootPos * 2 + 1 <= endPos) {
+        childPos = rootPos * 2 + 1
+        if (childPos + 1 <= endPos && arr[childPos] < arr[childPos + 1]) {
+            childPos++
+        }
+        if (arr[rootPos] < arr[childPos]) {
+            [arr[rootPos], arr[childPos]] = [arr[childPos], arr[rootPos]]
+            rootPos = childPos
+        } else {
+            return
+        }
+    }
+}
+
+""", "sorting", "C", 52),
+    (
+"""startPos
+
+    while (rootPos * 2 + 1 <= endPos) {
+        childPos = rootPos * 2 + 1
+        if (childPos + 1 <= endPos && arr[childPos] < arr[childPos + 1]) {
+            childPos++
+        }
+        if (arr[rootPos] < arr[childPos]) {
+            [arr[rootPos], arr[childPos]] = [arr[childPos], arr[rootPos]]
+            rootPos = childPos
+        } else {
+            return
+        }
+    }
+
+""", "sorting", "C", 52),
+    (
+"""public static void insertSort(int[] A){
+  for(int i = 1; i < A.length; i++){
+    int value = A[i];
+    int j = i - 1;
+    while(j >= 0 && A[j] > value){
+      A[j + 1] = A[j];
+      j = j - 1;
+    }
+    A[j + 1] = value;
+  }
+}
+
+""", "sorting", "C", 52),
+    (
+"""for(int i = 1; i < A.length; i++){
+    int value = A[i];
+    int j = i - 1;
+    while(j >= 0 && A[j] > value){
+      A[j + 1] = A[j];
+      j = j - 1;
+    }
+    A[j + 1] = value;
+  }
+
+""", "sorting", "C", 52),
+    (
+"""super E>> void insertionSort(List<E> a) {
+  for (int i = 1; i < a.size(); i++) {
+    int j = Math.abs(Collections.binarySearch(a.subList(0, i), a.get(i)) + 1);
+    Collections.rotate(a.subList(j, i+1), j - i);
+  }
+}
+
+""", "sorting", "C", 52),
+    (
+"""super E>> void insertionSort(E[] a) {
+  for (int i = 1; i < a.length; i++) {
+    E x = a[i];
+    int j = Math.abs(Arrays.binarySearch(a, 0, i, x) + 1);
+    System.arraycopy(a, j, a, j+1, i-j);
+    a[j] = x;
+  }
+}
+
+""", "sorting", "C", 52),
+    (
+"""for (int i = 1; i < a.length; i++) {
+    E x = a[i];
+    int j = Math.abs(Arrays.binarySearch(a, 0, i, x) + 1);
+    System.arraycopy(a, j, a, j+1, i-j);
+    a[j] = x;
+  }
+
+""", "sorting", "C", 52),
+    (
+"""insertionSort (a) {
+    for (var i = 0; i < a.length; i++) {
+        var k = a[i];
+        for (var j = i; j > 0 && k < a[j - 1]; j--)
+            a[j] = a[j - 1];
+        a[j] = k;
+    }
+    return a;
+}
+
+""", "sorting", "C", 52),
+    (
+"""for (var i = 0; i < a.length; i++) {
+        var k = a[i];
+        for (var j = i; j > 0 && k < a[j - 1]; j--)
+            a[j] = a[j - 1];
+        a[j] = k;
+    }
+
+""", "sorting", "C", 52),
+    (
+"""public static void shell(int[] a) {
+	int increment = a.length / 2;
+	while (increment > 0) {
+		for (int i = increment; i < a.length; i++) {
+			int j = i;
+			int temp = a[i];
+			while (j >= increment && a[j - increment] > temp) {
+				a[j] = a[j - increment];
+				j = j - increment;
+			}
+			a[j] = temp;
+		}
+		if (increment == 2) {
+			increment = 1;
+		} else {
+			increment *= (5.0 / 11);
+		}
+	}
+}
+
+""", "sorting", "C", 52),
+    (
+"""while (increment > 0) {
+		for (int i = increment; i < a.length; i++) {
+			int j = i;
+			int temp = a[i];
+			while (j >= increment && a[j - increment] > temp) {
+				a[j] = a[j - increment];
+				j = j - increment;
+			}
+			a[j] = temp;
+		}
+		if (increment == 2) {
+			increment = 1;
+		} else {
+			increment *= (5.0 / 11);
+		}
+	}
+
+""", "sorting", "C", 52),
+    (
+"""for (int i = increment; i < a.length; i++) {
+			int j = i;
+			int temp = a[i];
+			while (j >= increment && a[j - increment] > temp) {
+				a[j] = a[j - increment];
+				j = j - increment;
+			}
+			a[j] = temp;
+		}
+
+""", "sorting", "C", 52),
+    (
+"""shellSort (a) {
+    for (var h = a.length; h > 0; h = parseInt(h / 2)) {
+        for (var i = h; i < a.length; i++) {
+            var k = a[i];
+            for (var j = i; j >= h && k < a[j - h]; j -= h)
+                a[j] = a[j - h];
+            a[j] = k;
+        }
+    }
+    return a;
+}
+
+""", "sorting", "C", 52),
+    (
+"""for (var i = h; i < a.length; i++) {
+            var k = a[i];
+            for (var j = i; j >= h && k < a[j - h]; j -= h)
+                a[j] = a[j - h];
+            a[j] = k;
+        }
+
+""", "sorting", "C", 52),
+    (
+"""public static int[] sort(int[] old) {
+    // Loop for every bit in the integers
+    for (int shift = Integer.SIZE - 1; shift > -1; shift--) {
+        // The array to put the partially sorted array into
+        int[] tmp = new int[old.length];
+        // The number of 0s
+        int j = 0;
+
+        // Move the 0s to the new array, and the 1s to the old one
+        for (int i = 0; i < old.length; i++) {
+            // If there is a 1 in the bit we are testing, the number will be negative
+            boolean move = old[i] << shift >= 0;
+
+            // If this is the last bit, negative numbers are actually lower
+            if (shift == 0 ? !move : move) {
+                tmp[j] = old[i];
+                j++;
+            } else {
+                // It's a 1, so stick it in the old array for now
+                old[i - j] = old[i];
+            }
+        }
+
+        // Copy over the 1s from the old array
+        for (int i = j; i < tmp.length; i++) {
+            tmp[i] = old[i - j];
+        }
+
+        // And now the tmp array gets switched for another round of sorting
+        old = tmp;
+    }
+
+    return old;
+}
+
+""", "sorting", "C", 52),
+    (
+"""Loop for every bit in the integers
+    for (int shift = Integer.SIZE - 1; shift > -1; shift--) {
+        // The array to put the partially sorted array into
+        int[] tmp = new int[old.length];
+        // The number of 0s
+        int j = 0;
+
+        // Move the 0s to the new array, and the 1s to the old one
+        for (int i = 0; i < old.length; i++) {
+            // If there is a 1 in the bit we are testing, the number will be negative
+            boolean move = old[i] << shift >= 0;
+
+            // If this is the last bit, negative numbers are actually lower
+            if (shift == 0 ? !move : move) {
+                tmp[j] = old[i];
+                j++;
+            } else {
+                // It's a 1, so stick it in the old array for now
+                old[i - j] = old[i];
+            }
+        }
+
+        // Copy over the 1s from the old array
+        for (int i = j; i < tmp.length; i++) {
+            tmp[i] = old[i - j];
+        }
+
+        // And now the tmp array gets switched for another round of sorting
+        old = tmp;
+    }
+
+""", "sorting", "C", 52),
+    (
+"""Move the 0s to the new array, and the 1s to the old one
+        for (int i = 0; i < old.length; i++) {
+            // If there is a 1 in the bit we are testing, the number will be negative
+            boolean move = old[i] << shift >= 0;
+
+            // If this is the last bit, negative numbers are actually lower
+            if (shift == 0 ? !move : move) {
+                tmp[j] = old[i];
+                j++;
+            } else {
+                // It's a 1, so stick it in the old array for now
+                old[i - j] = old[i];
+            }
+        }
+
+""", "sorting", "C", 52),
+    (
+"""If this is the last bit, negative numbers are actually lower
+            if (shift == 0 ? !move : move) {
+                tmp[j] = old[i];
+                j++;
+            }
+
+""", "sorting", "C", 52),
+    (
+"""public static int[] lsdRadixSort(int[] tlist) {
+
+    List<Integer> intermediates;
+    int[] limits = getLimits(tlist);
+    tlist = rescale(tlist, limits[1]);
+
+    for (int px = 1; px <= limits[2]; ++px) {
+      @SuppressWarnings("unchecked")
+      Queue<Integer> bukits[] = new Queue[10];
+      for (int ix = 0; ix < tlist.length; ++ix) {
+        int cval = tlist[ix];
+        int digit = (int) (cval / Math.pow(10, px - 1) % 10);
+        if (bukits[digit] == null) {
+          bukits[digit] = new LinkedList<>();
+        }
+        bukits[digit].add(cval);
+      }
+
+      intermediates = new ArrayList<>();
+      for (int bi = 0; bi < 10; ++bi) {
+        if (bukits[bi] != null) {
+          while (bukits[bi].size() > 0) {
+            int nextd;
+            nextd = bukits[bi].poll();
+            intermediates.add(nextd);
+          }
+        }
+      }
+
+      for (int iw = 0; iw < intermediates.size(); ++iw) {
+        tlist[iw] = intermediates.get(iw);
+      }
+    }
+
+    tlist = rescale(tlist, -limits[1]);
+
+    return tlist;
+  }
+
+""", "sorting", "C", 52),
+    (
+"""for (int px = 1; px <= limits[2]; ++px) {
+      @SuppressWarnings("unchecked")
+      Queue<Integer> bukits[] = new Queue[10];
+      for (int ix = 0; ix < tlist.length; ++ix) {
+        int cval = tlist[ix];
+        int digit = (int) (cval / Math.pow(10, px - 1) % 10);
+        if (bukits[digit] == null) {
+          bukits[digit] = new LinkedList<>();
+        }
+        bukits[digit].add(cval);
+      }
+
+      intermediates = new ArrayList<>();
+      for (int bi = 0; bi < 10; ++bi) {
+        if (bukits[bi] != null) {
+          while (bukits[bi].size() > 0) {
+            int nextd;
+            nextd = bukits[bi].poll();
+            intermediates.add(nextd);
+          }
+        }
+      }
+
+      for (int iw = 0; iw < intermediates.size(); ++iw) {
+        tlist[iw] = intermediates.get(iw);
+      }
+    }
+
+""", "sorting", "C", 52),
+    (
+"""for (int ix = 0; ix < tlist.length; ++ix) {
+        int cval = tlist[ix];
+        int digit = (int) (cval / Math.pow(10, px - 1) % 10);
+        if (bukits[digit] == null) {
+          bukits[digit] = new LinkedList<>();
+        }
+        bukits[digit].add(cval);
+      }
+
+""", "sorting", "C", 52),
+    (
+"""for (int bi = 0; bi < 10; ++bi) {
+        if (bukits[bi] != null) {
+          while (bukits[bi].size() > 0) {
+            int nextd;
+            nextd = bukits[bi].poll();
+            intermediates.add(nextd);
+          }
+        }
+      }
+
+""", "sorting", "C", 52),
+    (
+"""if (bukits[bi] != null) {
+          while (bukits[bi].size() > 0) {
+            int nextd;
+            nextd = bukits[bi].poll();
+            intermediates.add(nextd);
+          }
+        }
+
+""", "sorting", "C", 52),
+    (
+"""private static int[] rescale(int[] arry, int delta) {
+
+    for (int ix = 0; ix < arry.length; ++ix) {
+      arry[ix] -= delta;
+    }
+
+    return arry;
+  }
+
+""", "sorting", "C", 52),
+    (
+"""private static int[] getLimits(int[] tlist) {
+
+    int[] lims = new int[3];
+
+    for (int i_ = 0; i_ < tlist.length; ++i_) {
+      lims[0] = Math.max(lims[0], tlist[i_]);
+      lims[1] = Math.min(lims[1], tlist[i_]);
+    }
+    lims[2] = (int) Math.ceil(Math.log10(lims[0] - lims[1]));
+
+    return lims;
+  }
+
+""", "sorting", "C", 52),
+    (
+"""private static void runSample(String[] args) {
+
+    int[][] lists = {
+      new int[] { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, },
+      new int[] { -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, -0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, },
+      new int[] { 2, 24, 45, 0, 66, 75, 170, -802, -90, 1066, 666, },
+      new int[] { 170, 45, 75, 90, 2, 24, 802, 66, },
+      new int[] { -170, -45, -75, -90, -2, -24, -802, -66, },
+    };
+
+    long etime;
+    lsdRadixSort(Arrays.copyOf(lists[0], lists[0].length)); // do one pass to set up environment to remove it from timings
+
+    for (int[] tlist : lists) {
+      System.out.println(array2list(tlist));
+      etime = System.nanoTime();
+      tlist = lsdRadixSort(tlist);
+      etime = System.nanoTime() - etime;
+      System.out.println(array2list(tlist));
+      System.out.printf("Elapsed time: %fs%n", ((double) etime / 1_000_000_000.0));
+      System.out.println();
+    }
+
+    return;
+  }
+
+""", "sorting", "C", 52),
+    (
+"""do one pass to set up environment to remove it from timings
+
+    for (int[] tlist : lists) {
+      System.out.println(array2list(tlist));
+      etime = System.nanoTime();
+      tlist = lsdRadixSort(tlist);
+      etime = System.nanoTime() - etime;
+      System.out.println(array2list(tlist));
+      System.out.printf("Elapsed time: %fs%n", ((double) etime / 1_000_000_000.0));
+      System.out.println();
+    }
+
+""", "sorting", "C", 52),
+    (
+"""private static List<Integer> array2list(int[] arry) {
+
+    List<Integer> target = new ArrayList<>(arry.length);
+
+    for (Integer iv : arry) {
+      target.add(iv);
+    }
+
+    return target;
+  }
+
+""", "sorting", "C", 52),
+    (
+"""test(value) {
+    if (this.bit === 31) { // sign bit
+      return value < 0; // negative int to left partition
+    } else {
+      return !(value & (1 << this.bit)); // 0 bit to left partition
+    }
+  }
+
+""", "sorting", "C", 52),
+    (
+"""Helper function to partition an array in place
+function partition(arr, start, end, radixTest) {
+  let i = start - 1;
+
+  for (let j = start; j < end; j++) {
+    if (radixTest.test(arr[j])) {
+      i++;
+      // Swap arr[i] and arr[j]
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+  return i + 1;
+}
+
+""", "sorting", "C", 52),
+    (
+"""for (let j = start; j < end; j++) {
+    if (radixTest.test(arr[j])) {
+      i++;
+      // Swap arr[i] and arr[j]
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+""", "sorting", "C", 52),
+    (
+"""Least significant digit radix sort
+function lsdRadixSort(arr) {
+  for (let lsb = 0; lsb < 32; ++lsb) { // least-significant-bit
+    const radixTest = new RadixTest(lsb);
+    partition(arr, 0, arr.length, radixTest);
+  }
+}
+
+""", "sorting", "C", 52),
+    (
+"""function msdRadixSort(arr, start = 0, end = arr.length, msb = 31) {
+  if (start < end -1 && msb >= 0) {  // changed (first != last)  to (start < end-1) for easier indexing
+    const radixTest = new RadixTest(msb);
+    let mid = partition(arr, start, end, radixTest);
+    msb--; // decrement most-significant-bit
+    msdRadixSort(arr, start, mid, msb); // sort left partition
+    msdRadixSort(arr, mid, end, msb); // sort right partition
+  }
+}
+
+""", "sorting", "C", 52),
+    (
+"""if (start < end -1 && msb >= 0) {  // changed (first != last)  to (start < end-1) for easier indexing
+    const radixTest = new RadixTest(msb);
+    let mid = partition(arr, start, end, radixTest);
+    msb--; // decrement most-significant-bit
+    msdRadixSort(arr, start, mid, msb); // sort left partition
+    msdRadixSort(arr, mid, end, msb); // sort right partition
+  }
+
+""", "sorting", "C", 52),
+    (
+"""test radix_sort
+function main() {
+  let data = [170, 45, 75, -90, -802, 24, 2, 66];
+
+  lsdRadixSort(data);
+  // msdRadixSort(data);
+
+  console.log(data.join(" "));
+}
+
+""", "sorting", "C", 52),
+    (
+"""public static void cocktailSort( int[] A ){
+	boolean swapped;
+	do {
+		swapped = false;
+		for (int i =0; i<=  A.length  - 2;i++) {
+			if (A[ i ] > A[ i + 1 ]) {
+				//test whether the two elements are in the wrong order
+				int temp = A[i];
+				A[i] = A[i+1];
+				A[i+1]=temp;
+				swapped = true;
+			}
+		}
+		if (!swapped) {
+			//we can exit the outer loop here if no swaps occurred.
+			break;
+		}
+		swapped = false;
+		for (int i= A.length - 2;i>=0;i--) {
+			if (A[ i ] > A[ i + 1 ]) {
+				int temp = A[i];
+				A[i] = A[i+1];
+				A[i+1]=temp;
+				swapped = true;
+			}
+		}
+		//if no elements have been swapped, then the list is sorted
+	} while (swapped);
+}
+
+""", "sorting", "C", 52),
+    (
+"""for (int i =0; i<=  A.length  - 2;i++) {
+			if (A[ i ] > A[ i + 1 ]) {
+				//test whether the two elements are in the wrong order
+				int temp = A[i];
+				A[i] = A[i+1];
+				A[i+1]=temp;
+				swapped = true;
+			}
+		}
+
+""", "sorting", "C", 52),
+    (
+"""if (A[ i ] > A[ i + 1 ]) {
+				//test whether the two elements are in the wrong order
+				int temp = A[i];
+				A[i] = A[i+1];
+				A[i+1]=temp;
+				swapped = true;
+			}
+
+""", "sorting", "C", 52),
+    (
+"""for (int i= A.length - 2;i>=0;i--) {
+			if (A[ i ] > A[ i + 1 ]) {
+				int temp = A[i];
+				A[i] = A[i+1];
+				A[i+1]=temp;
+				swapped = true;
+			}
+		}
+
+""", "sorting", "C", 52),
+    (
+"""if (A[ i ] > A[ i + 1 ]) {
+				int temp = A[i];
+				A[i] = A[i+1];
+				A[i+1]=temp;
+				swapped = true;
+			}
+
+""", "sorting", "C", 52),
+    (
+"""while (isSorted){
+    for (let i = 0; i< arr.length - 1;i++){
+            if (arr[i] > arr[i + 1])
+             {
+                let temp = arr[i];
+                arr[i] = arr[i + 1];
+                arr[i+1] = temp;
+                isSorted = true;
+             }
+    }
+
+    if (!isSorted)
+        break;
+    
+    isSorted = false;
+
+    for (let j = arr.length - 1; j > 0; j--){
+            if (arr[j-1] > arr[j])
+             {
+                let temp = arr[j];
+                arr[j] = arr[j - 1];
+                arr[j - 1] = temp;
+                isSorted = true;
+             }
+    }
+}
+
+""", "sorting", "C", 52),
+    (
+"""for (let i = 0; i< arr.length - 1;i++){
+            if (arr[i] > arr[i + 1])
+             {
+                let temp = arr[i];
+                arr[i] = arr[i + 1];
+                arr[i+1] = temp;
+                isSorted = true;
+             }
+    }
+
+""", "sorting", "C", 52),
+    (
+"""if (arr[i] > arr[i + 1])
+             {
+                let temp = arr[i];
+                arr[i] = arr[i + 1];
+                arr[i+1] = temp;
+                isSorted = true;
+             }
+
+""", "sorting", "C", 52),
+    (
+"""for (let j = arr.length - 1; j > 0; j--){
+            if (arr[j-1] > arr[j])
+             {
+                let temp = arr[j];
+                arr[j] = arr[j - 1];
+                arr[j - 1] = temp;
+                isSorted = true;
+             }
+    }
+
+""", "sorting", "C", 52),
+    (
+"""if (arr[j-1] > arr[j])
+             {
+                let temp = arr[j];
+                arr[j] = arr[j - 1];
+                arr[j - 1] = temp;
+                isSorted = true;
+             }
+
+""", "sorting", "C", 52),
+
+    # monte_carlo
+    (
+"""public static void main(String[] args){
+		int switchWins = 0;
+		int stayWins = 0;
+		Random gen = new Random();
+		for(int plays = 0;plays < 32768;plays++ ){
+			int[] doors = {0,0,0};//0 is a goat, 1 is a car
+			doors[gen.nextInt(3)] = 1;//put a winner in a random door
+			int choice = gen.nextInt(3); //pick a door, any door
+			int shown; //the shown door
+			do{
+				shown = gen.nextInt(3);
+			//don't show the winner or the choice
+			}while(doors[shown] == 1 || shown == choice);
+			
+			stayWins += doors[choice];//if you won by staying, count it
+			
+			//the switched (last remaining) door is (3 - choice - shown), because 0+1+2=3
+			switchWins += doors[3 - choice - shown];
+		}
+		System.out.println("Switching wins " + switchWins + " times.");
+		System.out.println("Staying wins " + stayWins + " times.");
+	}
+
+""", "monte_carlo", "C", 56),
+    (
+"""for(int plays = 0;plays < 32768;plays++ ){
+			int[] doors = {0,0,0};//0 is a goat, 1 is a car
+			doors[gen.nextInt(3)] = 1;//put a winner in a random door
+			int choice = gen.nextInt(3); //pick a door, any door
+			int shown; //the shown door
+			do{
+				shown = gen.nextInt(3);
+			//don't show the winner or the choice
+			}while(doors[shown] == 1 || shown == choice);
+			
+			stayWins += doors[choice];//if you won by staying, count it
+			
+			//the switched (last remaining) door is (3 - choice - shown), because 0+1+2=3
+			switchWins += doors[3 - choice - shown];
+		}
+
+""", "monte_carlo", "C", 56),
+    (
+"""montyhall(tests, doors) {
+	'use strict';
+	tests = tests ? tests : 1000;
+	doors = doors ? doors : 3;
+	var prizeDoor, chosenDoor, shownDoor, switchDoor, chosenWins = 0, switchWins = 0;
+	
+	// randomly pick a door excluding input doors
+	function pick(excludeA, excludeB) {
+		var door;
+		do {
+			door = Math.floor(Math.random() * doors);
+		} while (door === excludeA || door === excludeB);
+		return door;
+	}
+	
+	// run tests
+	for (var i = 0; i < tests; i ++) {
+		
+		// pick set of doors
+		prizeDoor = pick();
+		chosenDoor = pick();
+		shownDoor = pick(prizeDoor, chosenDoor);
+		switchDoor = pick(chosenDoor, shownDoor);
+
+		// test set for both choices
+		if (chosenDoor === prizeDoor) {
+			chosenWins ++;
+		} else if (switchDoor === prizeDoor) {
+			switchWins ++;
+		}
+	}
+	
+	// results
+	return {
+		stayWins: chosenWins + ' ' + (100 * chosenWins / tests) + '%',
+		switchWins: switchWins + ' ' + (100 * switchWins / tests) + '%'
+	};
+}
+
+""", "monte_carlo", "C", 56),
+    (
+"""randomly pick a door excluding input doors
+	function pick(excludeA, excludeB) {
+		var door;
+		do {
+			door = Math.floor(Math.random() * doors);
+		} while (door === excludeA || door === excludeB);
+		return door;
+	}
+
+""", "monte_carlo", "C", 56),
+    (
+"""run tests
+	for (var i = 0; i < tests; i ++) {
+		
+		// pick set of doors
+		prizeDoor = pick();
+		chosenDoor = pick();
+		shownDoor = pick(prizeDoor, chosenDoor);
+		switchDoor = pick(chosenDoor, shownDoor);
+
+		// test set for both choices
+		if (chosenDoor === prizeDoor) {
+			chosenWins ++;
+		} else if (switchDoor === prizeDoor) {
+			switchWins ++;
+		}
+	}
+
+""", "monte_carlo", "C", 56),
+    (
+"""montyhall(1000, 3)
+Object {stayWins: "349 34.9%", switchWins: "651 65.1%"}
+montyhall(1000, 4)
+Object {stayWins: "253 25.3%", switchWins: "384 38.4%"}
+montyhall(1000, 5)
+Object {stayWins: "202 20.2%", switchWins: "265 26.5%"}
+
+""", "monte_carlo", "C", 56),
+    (
+"""<script>
+  function montyhall() {
+    var tests = document.getElementById("userInputMH").value;
+    var doors =  document.getElementById("userInputDoor").value;
+    var prizeDoor, chosenDoor, shownDoor, switchDoor, chosenWins = 0,switchWins = 0;
+
+    function pick(excludeA, excludeB) {
+      var door;
+      do {
+        door = Math.floor(Math.random() * doors);
+      } while (door === excludeA || door === excludeB);
+      return door;
+    }
+
+
+    for (var i = 0; i < tests; i++) {
+
+      prizeDoor = pick();
+      chosenDoor = pick();
+      shownDoor = pick(prizeDoor, chosenDoor);
+      switchDoor = pick(chosenDoor, shownDoor);
+
+      if (chosenDoor === prizeDoor) {
+        chosenWins++;
+      } else if (switchDoor === prizeDoor) {
+        switchWins++;
+      }
+    }
+    document.getElementById("firstPickWins").innerHTML = 'First Door Wins: ' + chosenWins + ' | ' + (100 * chosenWins / tests) + '%';
+    document.getElementById("switchPickWins").innerHTML = 'Switched Door Wins: ' + switchWins + ' | ' + (100 * switchWins / tests) + '%';
+  }
+
+""", "monte_carlo", "C", 56),
+    (
+"""function pick(excludeA, excludeB) {
+      var door;
+      do {
+        door = Math.floor(Math.random() * doors);
+      } while (door === excludeA || door === excludeB);
+      return door;
+    }
+
+""", "monte_carlo", "C", 56),
+    (
+"""for (var i = 0; i < tests; i++) {
+
+      prizeDoor = pick();
+      chosenDoor = pick();
+      shownDoor = pick(prizeDoor, chosenDoor);
+      switchDoor = pick(chosenDoor, shownDoor);
+
+      if (chosenDoor === prizeDoor) {
+        chosenWins++;
+      } else if (switchDoor === prizeDoor) {
+        switchWins++;
+      }
+    }
+
+""", "monte_carlo", "C", 56),
+    (
+"""function (switchDoor) {
+	var i = 0, j = games.length, winningDoor, randomGuess, totalTimesWon = 0;
+
+	for (; i < j; ++i) {
+	    winningDoor = games[i];
+	    randomGuess = selectDoor();
+	    if ((randomGuess === winningDoor && !switchDoor) || 
+		(randomGuess !== winningDoor && switchDoor)) 
+	    {
+		/*
+		 * If I initially guessed the winning door and didn't switch,
+		 * or if I initially guessed a losing door but then switched,
+		 * I've won.
+		 *
+		 * I lose when I initially guess the winning door and then switch,
+                 * or initially guess a losing door and don't switch.
+		 */
+
+		totalTimesWon++;
+	    }
+	}
+	return totalTimesWon;
+    }
+
+""", "monte_carlo", "C", 56),
+    (
+"""for (; i < j; ++i) {
+	    winningDoor = games[i];
+	    randomGuess = selectDoor();
+	    if ((randomGuess === winningDoor && !switchDoor) || 
+		(randomGuess !== winningDoor && switchDoor)) 
+	    {
+		/*
+		 * If I initially guessed the winning door and didn't switch,
+		 * or if I initially guessed a losing door but then switched,
+		 * I've won.
+		 *
+		 * I lose when I initially guess the winning door and then switch,
+                 * or initially guess a losing door and don't switch.
+		 */
+
+		totalTimesWon++;
+	    }
+	}
+
+""", "monte_carlo", "C", 56),
+    (
+"""static double[] meanStdDev(double[] numbers) {
+        if (numbers.length == 0)
+            return new double[]{0.0, 0.0};
+
+        double sx = 0.0, sxx = 0.0;
+        long n = 0;
+        for (double x : numbers) {
+            sx += x;
+            sxx += pow(x, 2);
+            n++;
+        }
+
+        return new double[]{sx / n, pow((n * sxx - pow(sx, 2)), 0.5) / n};
+    }
+
+""", "monte_carlo", "C", 56),
+    (
+"""for (double x : numbers) {
+            sx += x;
+            sxx += pow(x, 2);
+            n++;
+        }
+
+""", "monte_carlo", "C", 56),
+    (
+"""static void showHistogram01(double[] numbers) {
+        final int maxWidth = 50;
+        long[] bins = new long[10];
+
+        for (double x : numbers)
+            bins[(int) (x * bins.length)]++;
+
+        double maxFreq = stream(bins).max().getAsLong();
+
+        for (int i = 0; i < bins.length; i++)
+            System.out.printf(" %3.1f: %s%n", i / (double) bins.length,
+                    replicate((int) (bins[i] / maxFreq * maxWidth), "*"));
+        System.out.println();
+    }
+
+""", "monte_carlo", "C", 56),
+    (
+"""@Override
+    public double getAsDouble() {
+        index++;
+        if (index >= state.length) {
+            double r = sqrt(-2 * log(random())) * sigma;
+            double x = 2 * PI * random();
+            state = new double[]{mu + r * sin(x), mu + r * cos(x)};
+            index = 0;
+        }
+        return state[index];
+
+    }
+
+""", "monte_carlo", "C", 56),
+    (
+"""if (index >= state.length) {
+            double r = sqrt(-2 * log(random())) * sigma;
+            double x = 2 * PI * random();
+            state = new double[]{mu + r * sin(x), mu + r * cos(x)};
+            index = 0;
+        }
+
+""", "monte_carlo", "C", 56),
+    (
+"""public static void main(String[] args) {
+        Locale.setDefault(Locale.US);
+        double[] data = DoubleStream.generate(new Test(0.0, 0.5)).limit(100_000)
+                .toArray();
+
+        double[] res = meanStdDev(data);
+        System.out.printf("Mean: %8.6f, SD: %8.6f%n", res[0], res[1]);
+
+        showHistogram01(stream(data).map(a -> max(0.0, min(0.9999, a / 3 + 0.5)))
+                .toArray());
+    }
+
+""", "monte_carlo", "C", 56),
+
+    # recursion_deep
+    (
+"""public static long itFibN(int n)
+{
+ if (n < 2)
+  return n;
+ long ans = 0;
+ long n1 = 0;
+ long n2 = 1;
+ for(n--; n > 0; n--)
+ {
+  ans = n1 + n2;
+  n1 = n2;
+  n2 = ans;
+ }
+ return ans;
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""for(n--; n > 0; n--)
+ {
+  ans = n1 + n2;
+  n1 = n2;
+  n2 = ans;
+ }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static long fib(long n) {
+    if (n <= 0)
+	return 0;
+
+    long i = (int) (n - 1);
+    long a = 1, b = 0, c = 0, d = 1, tmp1,tmp2;
+
+    while (i > 0) {
+	if (i % 2 != 0) {
+            tmp1 = d * b + c * a;
+	    tmp2 = d * (b + a) + c * b;
+	    a = tmp1;
+	    b = tmp2;
+	}
+
+        tmp1 = (long) (Math.pow(c, 2) + Math.pow(d, 2));
+        tmp2 = d * (2 * c + d);
+			
+        c = tmp1;
+        d = tmp2;
+
+        i = i / 2;
+    }
+    return a + b;
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""while (i > 0) {
+	if (i % 2 != 0) {
+            tmp1 = d * b + c * a;
+	    tmp2 = d * (b + a) + c * b;
+	    a = tmp1;
+	    b = tmp2;
+	}
+
+        tmp1 = (long) (Math.pow(c, 2) + Math.pow(d, 2));
+        tmp2 = d * (2 * c + d);
+			
+        c = tmp1;
+        d = tmp2;
+
+        i = i / 2;
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""if (i % 2 != 0) {
+            tmp1 = d * b + c * a;
+	    tmp2 = d * (b + a) + c * b;
+	    a = tmp1;
+	    b = tmp2;
+	}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public class Fibonacci {
+
+    static final Map<Integer, Long> cache = new HashMap<>();
+    static {
+        cache.put(1, 1L);
+        cache.put(2, 1L);
+    }
+
+    public static long get(int n)
+    {
+        return (n < 2) ? n : impl(n);
+    }
+    
+    private static long impl(int n)
+    {
+        return cache.computeIfAbsent(n, k -> impl(k-1) + impl(k-2));
+    }
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static long anFibN(final long n)
+{
+ double p = (1 + Math.sqrt(5)) / 2;
+ double q = 1 / p;
+ return (long) ((Math.pow(p, n) + Math.pow(q, n)) / Math.sqrt(5));
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static long fibTailRec(final int n)
+{
+ return fibInner(0, 1, n);
+}
+
+private static long fibInner(final long a, final long b, final int n)
+{
+ return n < 1 ? a : n == 1 ?  b : fibInner(b, a + b, n - 1);
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static LongStream fibStream() {
+  return LongStream.iterate( 1l, new LongUnaryOperator() {
+   private long lastFib = 0;
+   @Override public long applyAsLong( long operand ) {
+    long ret = operand + lastFib;
+    lastFib = operand;
+    return ret;
+   }
+  });
+ }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""1l, new LongUnaryOperator() {
+   private long lastFib = 0;
+   @Override public long applyAsLong( long operand ) {
+    long ret = operand + lastFib;
+    lastFib = operand;
+    return ret;
+   }
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""@Override public long applyAsLong( long operand ) {
+    long ret = operand + lastFib;
+    lastFib = operand;
+    return ret;
+   }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""fib(n) {
+  return function(n,a,b) {
+    return n>0 ? arguments.callee(n-1,b,a+b) : a;
+  }(n,0,1);
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""fib(n) {
+  var a = 0, b = 1, t;
+  while (n-- > 0) {
+    t = a;
+    a = b;
+    b += t;
+    console.log(a);
+  }
+  return a;
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""while (n-- > 0) {
+    t = a;
+    a = b;
+    b += t;
+    console.log(a);
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""function(n){
+        if (cache[n]) return cache[n];
+        else return cache[n] = n == 0 ? 0 : n < 0 ? -fib(-n)
+            : n <= 2 ? 1 : fib(n-2) + fib(n-1);
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""function fib(n) {
+        return Array.apply(null, Array(n + 1))
+            .map(function (_, i, lst) {
+                return lst[i] = (
+                    i ? i < 2 ? 1 :
+                    lst[i - 2] + lst[i - 1] :
+                    0
+                );
+            })[n];
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""return function(n) {
+        if (n === 0 || n === 1) {
+            return n;
+        }
+        return fn(n - 1) + fn(n - 2);
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""fibonacciGenerator() {
+    var prev = 0;
+    var curr = 1;
+    while (true) {
+        yield curr;
+        curr = curr + prev;
+        prev = curr - prev;
+    }
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""while (true) {
+        yield curr;
+        curr = curr + prev;
+        prev = curr - prev;
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""Int
+    function fib(n) {
+        return mapAccumL(([a, b]) => [
+            [b, a + b], b
+        ], [0, 1], range(1, n))[0][0];
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""(() => {
+    'use strict';
+
+    // fib :: Int -> Int
+    let fib = n => range(1, n)
+        .reduce(([a, b]) => [b, a + b], [0, 1])[0];
+
+
+    // GENERIC [m..n]
+
+    // range :: Int -> Int -> [Int]
+    let range = (m, n) =>
+        Array.from({
+            length: Math.floor(n - m) + 1
+        }, (_, i) => m + i);
+
+
+    // TEST
+    return fib(32);
+
+    // --> 2178309
+})();
+
+""", "recursion_deep", "C++", 40),
+    (
+"""// Assuming code is in Integer.fibonacci() method
+() Integer
+  [
+  if this < 2 [this] else [[this - 1].fibonacci + [this - 2].fibonacci]
+  ]
+
+""", "recursion_deep", "C++", 40),
+    (
+"""// Assuming in fibonacci(n) procedure
+(Integer n) Integer
+  [
+  if n < 2 [n] else [fibonacci(n - 1) + fibonacci(n - 2)]
+  ]
+
+""", "recursion_deep", "C++", 40),
+    (
+"""// Assuming code is in Integer.fibonacci() method
+() Integer
+  [
+  if this < 2
+    [this]
+  else
+    [
+    !prev: 1
+    !next: 1
+    2.to_pre this
+      [
+      !sum :  prev + next
+      prev := next
+      next := sum
+      ]
+      
+    next
+    ]    
+  ]
+
+""", "recursion_deep", "C++", 40),
+    (
+"""// Bind : is faster than assignment :=
+// loop is faster than to_pre (which uses a closure)
+() Integer
+  [
+  if this < 2
+    [this]
+  else
+    [
+    !prev: 1
+    !next: 1
+    !sum
+    !count: this - 2
+    loop
+      [
+      if count = 0 [exit]
+      count--
+      sum  : prev + next
+      prev : next
+      next : sum
+      ]
+      
+    next
+    ]    
+  ]
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public void move(int n, int from, int to, int via) {
+  if (n == 1) {
+    System.out.println("Move disk from pole " + from + " to pole " + to);
+  } else {
+    move(n - 1, from, via, to);
+    move(1, from, to, via);
+    move(n - 1, via, to, from);
+  }
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""Move disk from pole 1 to pole 2
+Move disk from pole 1 to pole 3
+Move disk from pole 2 to pole 3
+Move disk from pole 1 to pole 2
+Move disk from pole 3 to pole 1
+Move disk from pole 3 to pole 2
+Move disk from pole 1 to pole 2
+
+""", "recursion_deep", "C++", 40),
+    (
+"""move(n, a, b, c) {
+  if (n > 0) {
+    move(n-1, a, c, b);
+    console.log("Move disk from " + a + " to " + c);
+    move(n-1, b, a, c);
+  }
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""if (n > 0) {
+    move(n-1, a, c, b);
+    console.log("Move disk from " + a + " to " + c);
+    move(n-1, b, a, c);
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""[[String, String]]
+    function hanoi(n, a, b, c) {
+        return n ? hanoi(n - 1, a, c, b)
+            .concat([
+                [a, b]
+            ])
+            .concat(hanoi(n - 1, c, b, a)) : [];
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""["left -> right", "left -> mid",
+ "right -> mid", "left -> right", 
+ "mid -> left", "mid -> right", 
+ "left -> right"]
+
+""", "recursion_deep", "C++", 40),
+    (
+"""(() => {
+    "use strict";
+
+    // ----------------- TOWERS OF HANOI -----------------
+
+    // hanoi :: Int -> String -> String ->
+    // String -> [[String, String]]
+    const hanoi = n =>
+        (a, b, c) => {
+            const go = hanoi(n - 1);
+
+            return n
+                ? [
+                    ...go(a, c, b),
+                    [a, b],
+                    ...go(c, b, a)
+                ]
+                : [];
+        };
+
+
+    // ---------------------- TEST -----------------------
+    return hanoi(3)("left", "right", "mid")
+    .map(d => `${d[0]} -> ${d[1]}`)
+    .join("\\n");
+})();
+
+""", "recursion_deep", "C++", 40),
+    (
+"""function move(n, a, b, c) {
+  if (n > 0) {
+    move(n-1, a, c, b);
+    puts("Move disk from " + a + " to " + c);
+    move(n-1, b, a, c);
+  }
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""if (n > 0) {
+    move(n-1, a, c, b);
+    puts("Move disk from " + a + " to " + c);
+    move(n-1, b, a, c);
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static BigInteger ack(BigInteger m, BigInteger n) {
+    return m.equals(BigInteger.ZERO)
+            ? n.add(BigInteger.ONE)
+            : ack(m.subtract(BigInteger.ONE),
+                        n.equals(BigInteger.ZERO) ? BigInteger.ONE : ack(m, n.subtract(BigInteger.ONE)));
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""@FunctionalInterface
+public interface FunctionalField<FIELD extends Enum<?>> {
+  public Object untypedField(FIELD field);
+
+  @SuppressWarnings("unchecked")
+  public default <VALUE> VALUE field(FIELD field) {
+    return (VALUE) untypedField(field);
+  }
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static <INPUT, INTERMEDIARY, OUTPUT> Function<INPUT, OUTPUT> new_(Function<INPUT, INTERMEDIARY> toIntermediary, UnaryOperator<INTERMEDIARY> unaryOperator, Predicate<INTERMEDIARY> predicate, Function<INTERMEDIARY, OUTPUT> toOutput) {
+    return input ->
+      $.new_(
+        Stream.iterate(
+          toIntermediary.apply(input),
+          unaryOperator
+        ),
+        predicate,
+        toOutput
+      )
+    ;
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static <INPUT1, INPUT2, INTERMEDIARY, OUTPUT> BiFunction<INPUT1, INPUT2, OUTPUT> new_(BiFunction<INPUT1, INPUT2, INTERMEDIARY> toIntermediary, UnaryOperator<INTERMEDIARY> unaryOperator, Predicate<INTERMEDIARY> predicate, Function<INTERMEDIARY, OUTPUT> toOutput) {
+    return (input1, input2) ->
+      $.new_(
+        Stream.iterate(
+          toIntermediary.apply(input1, input2),
+          unaryOperator
+        ),
+        predicate,
+        toOutput
+      )
+    ;
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""private static <INTERMEDIARY, OUTPUT> OUTPUT new_(Stream<INTERMEDIARY> stream, Predicate<INTERMEDIARY> predicate, Function<INTERMEDIARY, OUTPUT> function) {
+      return stream
+        .filter(predicate)
+        .map(function)
+        .findAny()
+        .orElseThrow(RuntimeException::new)
+      ;
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""private static Ackermann new_(BigInteger number1, BigInteger number2, Stack<BigInteger> stack, boolean flag) {
+      return (FunctionalAckermann) field -> {
+        switch (field) {
+          case number1: return number1;
+          case number2: return number2;
+          case stack: return stack;
+          case flag: return flag;
+          default: throw new UnsupportedOperationException(
+            field instanceof Field
+              ? "Field checker has not been updated properly."
+              : "Field is not of the correct type."
+          );
+        }
+      };
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""switch (field) {
+          case number1: return number1;
+          case number2: return number2;
+          case stack: return stack;
+          case flag: return flag;
+          default: throw new UnsupportedOperationException(
+            field instanceof Field
+              ? "Field checker has not been updated properly."
+              : "Field is not of the correct type."
+          );
+        }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""@Override
+  public void run() {
+    String operating_system = System.getProperty("os.name").toLowerCase();
+    if ( operating_system.equals("windows") || operating_system.equals("linux") || operating_system.equals("macintosh") ) {
+      SYSTEM_MEMORY_LIMIT_PERCENTAGE = 0.25;
+    }
+
+    while ( iterativeAckermann.getConsumed_heap() >= SYSTEM_MEMORY_LIMIT_PERCENTAGE * Runtime.getRuntime().freeMemory() ) {
+      try {
+        wait();
+      }
+      catch ( InterruptedException e ) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
+    if ( ! iterativeAckermann.isAlive() )
+      iterativeAckermann.start();
+    else
+      notifyAll();
+
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public IterativeAckermann(BigInteger m, BigInteger n, Integer invalid, Long invalid2) {
+    super();
+    this.m = m;
+    this.n = n;
+    this.hash_size = invalid;
+    this.consumed_heap = invalid2;
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public IterativeAckermann() {
+    // TODO Auto-generated constructor stub
+    super();
+    m = null;
+    n = null;
+    hash_size = 0;
+    consumed_heap = 0l;
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""@Override
+    public boolean equals(Object o_) {
+
+      if ( o_ == null ) {
+        return false;
+      }
+      if ( o_.getClass() != this.getClass() ) {
+        return false;
+      }
+      Pair<?, ?> o = (Pair<?, ?>) o_;
+      return x.equals(o.x) && y.equals(o.y);
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""@Override
+  public void run() {
+    while ( hash_size >= HASH_SIZE_LIMIT ) {
+      try {
+        this.wait();
+      }
+      catch ( InterruptedException e ) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
+    for ( BigInteger i = BigInteger.ZERO; i.compareTo(LIMIT) == - 1; i = i.add(BigInteger.ONE) ) {
+      for ( BigInteger j = BigInteger.ZERO; j.compareTo(LIMIT) == - 1; j = j.add(BigInteger.ONE) ) {
+        IterativeAckermann iterativeAckermann = new IterativeAckermann(i, j, null, null);
+        System.out.printf("Ackmermann(%d, %d) = %d\\n", i, j, iterativeAckermann.iterative_ackermann(i, j));
+
+      }
+    }
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""while ( hash_size >= HASH_SIZE_LIMIT ) {
+      try {
+        this.wait();
+      }
+      catch ( InterruptedException e ) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public BigInteger iterative_ackermann(BigInteger m, BigInteger n) {
+    if ( m.compareTo(BigInteger.ZERO) != - 1 && m.compareTo(BigInteger.ZERO) != - 1 )
+      try {
+        HashMap<Pair<BigInteger, BigInteger>, BigInteger> solved_set = new HashMap<Pair<BigInteger, BigInteger>, BigInteger>(900000);
+        Stack<Pair<BigInteger, BigInteger>> to_solve = new Stack<Pair<BigInteger, BigInteger>>();
+        to_solve.push(new Pair<BigInteger, BigInteger>(m, n));
+
+        while ( ! to_solve.isEmpty() ) {
+          Pair<BigInteger, BigInteger> head = to_solve.peek();
+          if ( head.x.equals(BigInteger.ZERO) ) {
+            solved_set.put(head, head.y.add(BigInteger.ONE));
+            to_solve.pop();
+          }
+          else if ( head.y.equals(BigInteger.ZERO) ) {
+            Pair<BigInteger, BigInteger> next = new Pair<BigInteger, BigInteger>(head.x.subtract(BigInteger.ONE), BigInteger.ONE);
+            BigInteger result = solved_set.get(next);
+            if ( result == null ) {
+              to_solve.push(next);
+            }
+            else {
+              solved_set.put(head, result);
+              to_solve.pop();
+            }
+          }
+          else {
+            Pair<BigInteger, BigInteger> next0 = new Pair<BigInteger, BigInteger>(head.x, head.y.subtract(BigInteger.ONE));
+            BigInteger result0 = solved_set.get(next0);
+            if ( result0 == null ) {
+              to_solve.push(next0);
+            }
+            else {
+              Pair<BigInteger, BigInteger> next = new Pair<BigInteger, BigInteger>(head.x.subtract(BigInteger.ONE), result0);
+              BigInteger result = solved_set.get(next);
+              if ( result == null ) {
+                to_solve.push(next);
+              }
+              else {
+                solved_set.put(head, result);
+                to_solve.pop();
+              }
+            }
+          }
+        }
+        this.hash_size = solved_set.size();
+        System.out.println("Hash Size: " + hash_size);
+        consumed_heap = (Runtime.getRuntime().totalMemory() / (1024 * 1024));
+        System.out.println("Consumed Heap: " + consumed_heap + "m");
+        setHash_size(hash_size);
+        setConsumed_heap(consumed_heap);
+        return solved_set.get(new Pair<BigInteger, BigInteger>(m, n));
+
+      }
+      catch ( OutOfMemoryError e ) {
+        // TODO: handle exception
+        e.printStackTrace();
+      }
+    throw new IllegalArgumentException("The arguments must be non-negative integers.");
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static void main(String[] args) {
+    IterativeAckermannMemoryOptimization iterative_ackermann_memory_optimization = new IterativeAckermannMemoryOptimization(
+        new IterativeAckermann());
+    iterative_ackermann_memory_optimization.start();
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""stackermann(M, N) {
+  const stack = [];
+  for (;;) {
+    if (M === 0) {
+      N++;
+      if (stack.length === 0) return N;
+      const r = stack[stack.length-1];
+      if (r[1] === 1) stack.length--;
+      else r[1]--;
+      M = r[0];
+    } else if (N === 0) {
+      M--;
+      N = 1;
+    } else {
+      M--
+      stack.push([M, N]);
+      N = 1;
+    }
+  }
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""for (;;) {
+    if (M === 0) {
+      N++;
+      if (stack.length === 0) return N;
+      const r = stack[stack.length-1];
+      if (r[1] === 1) stack.length--;
+      else r[1]--;
+      M = r[0];
+    } else if (N === 0) {
+      M--;
+      N = 1;
+    } else {
+      M--
+      stack.push([M, N]);
+      N = 1;
+    }
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""if (M === 0) {
+      N++;
+      if (stack.length === 0) return N;
+      const r = stack[stack.length-1];
+      if (r[1] === 1) stack.length--;
+      else r[1]--;
+      M = r[0];
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""nodejs
+function ack(M, N){
+	const next = new Float64Array(M + 1);
+	const goal = new Float64Array(M + 1).fill(1, 0, M);
+	const n = N + 1;
+
+	// This serves as a sentinel value;
+	// next[M] never equals goal[M] == -1,
+	// so we don't need an extra check for
+	// loop termination below.
+	goal[M] = -1;
+
+	let v;
+	do {
+		v = next[0] + 1;
+		let m = 0;
+		while (next[m] === goal[m]) {
+			goal[m] = v;
+			next[m++]++;
+		}
+		next[m]++;
+	} while (next[M] !== n);
+	return v;
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""(() => {
+    'use strict';
+
+    // ackermann :: Int -> Int -> Int
+    const ackermann = m => n => {
+        const go = (m, n) =>
+            0 === m ? (
+                succ(n)
+            ) : go(pred(m), 0 === n ? (
+                1
+            ) : go(m, pred(n)));
+        return go(m, n);
+    };
+
+    // TEST -----------------------------------------------
+    const main = () => console.log(JSON.stringify(
+        [0, 1, 2, 3].map(
+            flip(ackermann)(3)
+        )
+    ));
+
+
+    // GENERAL FUNCTIONS ----------------------------------
+
+    // flip :: (a -> b -> c) -> b -> a -> c
+    const flip = f =>
+        x => y => f(y)(x);
+
+    // pred :: Enum a => a -> a
+    const pred = x => x - 1;
+
+    // succ :: Enum a => a -> a
+    const succ = x => 1 + x;
+
+
+    // MAIN ---
+    return main();
+})();
+
+""", "recursion_deep", "C++", 40),
+    (
+"""/* Ackermann function, in Jsish */
+
+function ack(m, n) {
+ return m === 0 ? n + 1 : ack(m - 1, n === 0  ? 1 : ack(m, n - 1));
+}
+
+if (Interp.conf('unitTest')) {
+    Interp.conf({maxDepth:4096});
+;    ack(1,3);
+;    ack(2,3);
+;    ack(3,3);
+;    ack(1,5);
+;    ack(2,5);
+;    ack(3,5);
+}
+
+/*
+=!EXPECTSTART!=
+ack(1,3) ==> 5
+ack(2,3) ==> 9
+ack(3,3) ==> 61
+ack(1,5) ==> 7
+ack(2,5) ==> 13
+ack(3,5) ==> 253
+=!EXPECTEND!=
+*/
+
+""", "recursion_deep", "C++", 40),
+    (
+"""ackermann(int m, int n) {
+  if (m == 0)
+    return n + 1;
+  else if (m > 0 && n == 0)
+    return ackermann(m - 1, 1);
+  else
+    return ackermann( m - 1, ackermann(m, n - 1) );
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""the first 4x7 Ackermann numbers
+void setup() {
+  for (int m=0; m<4; m++) {
+    for (int n=0; n<7; n++) {
+      print(ackermann(m, n), " ");
+    }
+    println();
+  }
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""for (int m=0; m<4; m++) {
+    for (int n=0; n<7; n++) {
+      print(ackermann(m, n), " ");
+    }
+    println();
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""static <T> void traverse(Node<T> node, ORDER order) {
+		if (node == null) {
+			return;
+		}
+		switch (order) {
+		case PREORDER:
+			node.visit();
+			traverse(node.left, order);
+			traverse(node.right, order);
+			break;
+		case INORDER:
+			traverse(node.left, order);
+			node.visit();
+			traverse(node.right, order);
+			break;
+		case POSTORDER:
+			traverse(node.left, order);
+			traverse(node.right, order);
+			node.visit();
+			break;
+		case LEVEL:
+			Queue<Node<T>> queue = new LinkedList<>();
+			queue.add(node);
+			while(!queue.isEmpty()){
+				Node<T> next = queue.remove();
+				next.visit();
+				if(next.left!=null)
+					queue.add(next.left);
+				if(next.right!=null)
+					queue.add(next.right);
+			}
+		}
+	}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""switch (order) {
+		case PREORDER:
+			node.visit();
+			traverse(node.left, order);
+			traverse(node.right, order);
+			break;
+		case INORDER:
+			traverse(node.left, order);
+			node.visit();
+			traverse(node.right, order);
+			break;
+		case POSTORDER:
+			traverse(node.left, order);
+			traverse(node.right, order);
+			node.visit();
+			break;
+		case LEVEL:
+			Queue<Node<T>> queue = new LinkedList<>();
+			queue.add(node);
+			while(!queue.isEmpty()){
+				Node<T> next = queue.remove();
+				next.visit();
+				if(next.left!=null)
+					queue.add(next.left);
+				if(next.right!=null)
+					queue.add(next.right);
+			}
+		}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static void main(String[] args) {
+
+		Node<Integer> one = new Node<Integer>(1);
+		Node<Integer> two = new Node<Integer>(2);
+		Node<Integer> three = new Node<Integer>(3);
+		Node<Integer> four = new Node<Integer>(4);
+		Node<Integer> five = new Node<Integer>(5);
+		Node<Integer> six = new Node<Integer>(6);
+		Node<Integer> seven = new Node<Integer>(7);
+		Node<Integer> eight = new Node<Integer>(8);
+		Node<Integer> nine = new Node<Integer>(9);
+		
+		one.left = two;
+		one.right = three;
+		two.left = four;
+		two.right = five;
+		three.left = six;
+		four.left = seven;
+		six.left = eight;
+		six.right = nine;
+
+		traverse(one, ORDER.PREORDER);
+		System.out.println(); 
+		traverse(one, ORDER.INORDER);
+		System.out.println();
+		traverse(one, ORDER.POSTORDER);
+		System.out.println();
+		traverse(one, ORDER.LEVEL);
+		
+	}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""<T> void visit(Node<T> aNode) {
+      action.accept(aNode);
+      aNode.left.accept(this);
+      aNode.right.accept(this);
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""<T> void visit(Node<T> aNode) {
+      aNode.left.accept(this);
+      action.accept(aNode);
+      aNode.right.accept(this);
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""<T> void visit(Node<T> aNode) {
+      aNode.left.accept(this);
+      aNode.right.accept(this);
+      action.accept(aNode);
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""<T> void visit(Node<T> aNode) {
+      Queue<EmptyNode> queue = new LinkedList<>();
+      queue.add(aNode);
+      do {
+        queue.remove().accept(this, queue);
+      } while (!queue.isEmpty());
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""<T> void visit(Node<T> aNode, Queue<EmptyNode> queue) {
+      action.accept(aNode);
+      queue.add(aNode.left);
+      queue.add(aNode.right);
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static void main(String[] args) {
+    Node<Integer> tree = new Node<Integer>(1)
+                          .left(new Node<Integer>(2)
+                            .left(new Node<Integer>(4)
+                              .left(new Node<Integer>(7)))
+                            .right(new Node<Integer>(5)))
+                          .right(new Node<Integer>(3)
+                            .left(new Node<Integer>(6)
+                              .left(new Node<Integer>(8))
+                              .right(new Node<Integer>(9))));
+    Consumer<Node<?>> print = aNode -> System.out.print(aNode.data + " ");
+    tree.accept(new PreOrder(print));
+    System.out.println();
+    tree.accept(new InOrder(print));
+    System.out.println();
+    tree.accept(new PostOrder(print));
+    System.out.println();
+    tree.accept(new LevelOrder(print));
+    System.out.println();
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""BinaryTree(value, left, right) {
+    this.value = value;
+    this.left = left;
+    this.right = right;
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""function(func, order) {
+    for (var i in order) 
+        switch (order[i]) {
+            case "this": func(this.value); break;
+            case "left": if (this.left) this.left.walk(func, order); break;
+            case "right": if (this.right) this.right.walk(func, order); break;
+        }
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""switch (order[i]) {
+            case "this": func(this.value); break;
+            case "left": if (this.left) this.left.walk(func, order); break;
+            case "right": if (this.right) this.right.walk(func, order); break;
+        }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""function(func) {
+    var queue = [this];
+    while (queue.length != 0) {
+        var node = queue.shift();
+        func(node.value);
+        if (node.left) queue.push(node.left);
+        if (node.right) queue.push(node.right);
+    }
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""while (queue.length != 0) {
+        var node = queue.shift();
+        func(node.value);
+        if (node.left) queue.push(node.left);
+        if (node.right) queue.push(node.right);
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""convenience function for creating a binary tree
+function createBinaryTreeFromArray(ary) {
+    var left = null, right = null;
+    if (ary[1]) left = createBinaryTreeFromArray(ary[1]);
+    if (ary[2]) right = createBinaryTreeFromArray(ary[2]);
+    return new BinaryTree(ary[0], left, right);
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""function preorder(n) {
+        return [n[v]].concat(
+            n[l] ? preorder(n[l]) : []
+        ).concat(
+            n[r] ? preorder(n[r]) : []
+        );
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""function inorder(n) {
+        return (
+            n[l] ? inorder(n[l]) : []
+        ).concat(
+            n[v]
+        ).concat(
+            n[r] ? inorder(n[r]) : []
+        );
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""function postorder(n) {
+        return (
+            n[l] ? postorder(n[l]) : []
+        ).concat(
+            n[r] ? postorder(n[r]) : []
+        ).concat(
+            n[v]
+        );
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""function levelorder(n) {
+        return (function loop(x) {
+            return x.length ? (
+                x[0] ? (
+                [x[0][v]].concat(
+                        loop(
+                            x.slice(1).concat(
+                                [x[0][l], x[0][r]]
+                            )
+                        )
+                    )
+                ) : loop(x.slice(1))
+            ) : [];
+        })([n]);
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""return (function loop(x) {
+            return x.length ? (
+                x[0] ? (
+                [x[0][v]].concat(
+                        loop(
+                            x.slice(1).concat(
+                                [x[0][l], x[0][r]]
+                            )
+                        )
+                    )
+                ) : loop(x.slice(1))
+            ) : [];
+        }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""s
+    function wikiTable(lstRows, blnHeaderRow, strStyle) {
+        return '{| class="wikitable" ' + (
+            strStyle ? 'style="' + strStyle + '"' : ''
+        ) + lstRows.map(function (lstRow, iRow) {
+            var strDelim = ((blnHeaderRow && !iRow) ? '!' : '|');
+
+            return '\\n|-\\n' + strDelim + ' ' + lstRow.map(function (v) {
+                return typeof v === 'undefined' ? ' ' : v;
+            }).join(' ' + strDelim + strDelim + ' ');
+        }).join('') + '\\n|}';
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""[a]
+    function traverse(strOrderName, dctTree) {
+        var strName = strOrderName.toLowerCase();
+
+        if (strName.startsWith('level')) {
+
+            // LEVEL-ORDER
+            return levelOrder([dctTree]);
+
+        } else if (strName.startsWith('in')) {
+            var lstNest = dctTree.nest;
+
+            if ((lstNest ? lstNest.length : 0) < 3) {
+                var left = lstNest[0] || [],
+                    right = lstNest[1] || [],
+
+                    lstLeft = left.nest ? (
+                        traverse(strName, left)
+                    ) : (left.value || []),
+                    lstRight = right.nest ? (
+                        traverse(strName, right)
+                    ) : (right.value || []);
+
+                return (lstLeft !== undefined && lstRight !== undefined) ?
+
+                    // IN-ORDER
+                    (lstLeft instanceof Array ? lstLeft : [lstLeft])
+                    .concat(dctTree.value)
+                    .concat(lstRight) : undefined;
+
+            } else { // in-order only defined here for binary trees
+                return undefined;
+            }
+
+        } else {
+            var lstTraversed = concatMap(function (x) {
+                return traverse(strName, x);
+            }, (dctTree.nest || []));
+
+            return (
+                strName.startsWith('pre') ? (
+
+                    // PRE-ORDER
+                    [dctTree.value].concat(lstTraversed)
+
+                ) : strName.startsWith('post') ? (
+
+                    // POST-ORDER
+                    lstTraversed.concat(dctTree.value)
+
+                ) : []
+            );
+        }
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""[a]
+    function levelOrder(lstTree) {
+        var lngTree = lstTree.length,
+            head = lngTree ? lstTree[0] : undefined,
+            tail = lstTree.slice(1);
+
+        // Recursively take any value found in the head node
+        // of the remaining tail, deferring any child nodes
+        // of that head to the end of the tail
+        return lngTree ? (
+            head ? (
+                [head.value].concat(
+                    levelOrder(
+                        tail
+                        .concat(head.nest || [])
+                    )
+                )
+            ) : levelOrder(tail)
+        ) : [];
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""{"preorder":[1, 2, 4, 7, 5, 3, 6, 8, 9], 
+"inorder":[7, 4, 2, 5, 1, 8, 6, 9, 3], 
+"postorder":[7, 4, 5, 2, 8, 9, 6, 3, 1], 
+"level-order":[1, 2, 3, 4, 5, 6, 7, 8, 9]}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""(() => {
+    "use strict";
+
+    // preorder :: a -> [[a]] -> [a]
+    const preorder = x =>
+        xs => [x, ...xs.flat()];
+
+
+    // inorder :: a -> [[a]] -> [a]
+    const inorder = x =>
+        xs => Boolean(xs.length) ? (
+            [...xs[0], x, ...xs.slice(1).flat()]
+        ) : [x];
+
+
+    // postorder :: a -> [[a]] -> [a]
+    const postorder = x =>
+        xs => [...xs.flat(), x];
+
+
+    // levelOrder :: Tree a -> [a]
+    const levelOrder = tree =>
+        levels(tree).flat();
+
+
+    // ------------------------TEST------------------------
+    // main :: IO ()
+    const main = () => {
+        const tree = Node(1)([
+            Node(2)([
+                Node(4)([
+                    Node(7)([])
+                ]),
+                Node(5)([])
+            ]),
+            Node(3)([
+                Node(6)([
+                    Node(8)([]),
+                    Node(9)([])
+                ])
+            ])
+        ]);
+
+        // Generated by code in Rosetta Code
+        // task: 'Visualize a tree'
+        console.log([
+            "       + 4 - 7",
+            "   + 2 ¦",
+            "   ¦   + 5",
+            " 1 ¦",
+            "   ¦       + 8",
+            "   + 3 - 6 ¦",
+            "           + 9"
+        ].join("\\n"));
+
+        [preorder, inorder, postorder]
+        .forEach(f => console.log(
+            justifyRight(11)(" ")(`${f.name}:`),
+            foldTree(f)(
+                tree
+            )
+        ));
+
+        console.log(
+            `levelOrder: ${levelOrder(tree)}`
+        );
+    };
+
+    // ---------------------- TREES ----------------------
+
+    // Node :: a -> [Tree a] -> Tree a
+    const Node = v =>
+        // Constructor for a Tree node which connects a
+        // value of some kind to a list of zero or
+        // more child trees.
+        xs => ({
+            type: "Node",
+            root: v,
+            nest: xs || []
+        });
+
+
+    // foldTree :: (a -> [b] -> b) -> Tree a -> b
+    const foldTree = f => {
+        // The catamorphism on trees. A summary
+        // value obtained by a depth-first fold.
+        const go = tree => f(
+            tree.root
+        )(
+            tree.nest.map(go)
+        );
+
+        return go;
+    };
+
+
+    // levels :: Tree a -> [[a]]
+    const levels = tree => {
+        // A list of lists, grouping the root
+        // values of each level of the tree.
+        const go = (a, node) => {
+            const [h, ...t] = 0 < a.length ? a : [
+                []
+            ];
+
+            return [
+                [node.root, ...h],
+                ...node.nest.reduceRight(go, t)
+            ];
+        };
+
+        return go([], tree);
+    };
+
+
+    // --------------------- GENERIC ---------------------
+
+    // justifyRight :: Int -> Char -> String -> String
+    const justifyRight = n =>
+        // The string s, preceded by enough padding (with
+        // the character c) to reach the string length n.
+        c => s => Boolean(s) ? (
+            s.padStart(n, c)
+        ) : "";
+
+    // MAIN ---
+    re
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static int binarySearch(int[] nums, int check) {
+        int hi = nums.length - 1;
+        int lo = 0;
+        while (hi >= lo) {
+            int guess = (lo + hi) >>> 1;  // from OpenJDK
+            if (nums[guess] > check) {
+                hi = guess - 1;
+            } else if (nums[guess] < check) {
+                lo = guess + 1;
+            } else {
+                return guess;
+            }
+        }
+        return -1;
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""while (hi >= lo) {
+            int guess = (lo + hi) >>> 1;  // from OpenJDK
+            if (nums[guess] > check) {
+                hi = guess - 1;
+            } else if (nums[guess] < check) {
+                lo = guess + 1;
+            } else {
+                return guess;
+            }
+        }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static void main(String[] args) {
+        int[] haystack = {1, 5, 6, 7, 8, 11};
+        int needle = 5;
+        int index = binarySearch(haystack, needle);
+        if (index == -1) {
+            System.out.println(needle + " is not in the array");
+        } else {
+            System.out.println(needle + " is at index " + index);
+        }
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static int binarySearch(int[] haystack, int needle, int lo, int hi) {
+        if (hi < lo) {
+            return -1;
+        }
+        int guess = (hi + lo) / 2;
+        if (haystack[guess] > needle) {
+            return binarySearch(haystack, needle, lo, guess - 1);
+        } else if (haystack[guess] < needle) {
+            return binarySearch(haystack, needle, guess + 1, hi);
+        }
+        return guess;
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""public static void main(String[] args) {
+        int[] haystack = {1, 5, 6, 7, 8, 11};
+        int needle = 5;
+
+        int index = binarySearch(haystack, needle, 0, haystack.length);
+
+        if (index == -1) {
+            System.out.println(needle + " is not in the array");
+        } else {
+            System.out.println(needle + " is at index " + index);
+        }
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""binary_search_recursive(a, value, lo, hi) {
+  if (hi < lo) { return null; }
+
+  var mid = Math.floor((lo + hi) / 2);
+
+  if (a[mid] > value) {
+    return binary_search_recursive(a, value, lo, mid - 1);
+  }
+  if (a[mid] < value) {
+    return binary_search_recursive(a, value, mid + 1, hi);
+  }
+  return mid;
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""binary_search_iterative(a, value) {
+  var mid, lo = 0,
+      hi = a.length - 1;
+
+  while (lo <= hi) {
+    mid = Math.floor((lo + hi) / 2);
+
+    if (a[mid] > value) {
+      hi = mid - 1;
+    } else if (a[mid] < value) {
+      lo = mid + 1;
+    } else {
+      return mid;
+    }
+  }
+  return null;
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""while (lo <= hi) {
+    mid = Math.floor((lo + hi) / 2);
+
+    if (a[mid] > value) {
+      hi = mid - 1;
+    } else if (a[mid] < value) {
+      lo = mid + 1;
+    } else {
+      return mid;
+    }
+  }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""(() => {
+    'use strict';
+
+    const main = () => {
+
+        // findRecursive :: a -> [a] -> Either String Int
+        const findRecursive = (x, xs) => {
+            const go = (lo, hi) => {
+                if (hi < lo) {
+                    return Left('not found');
+                } else {
+                    const
+                        mid = div(lo + hi, 2),
+                        v = xs[mid];
+                    return v > x ? (
+                        go(lo, mid - 1)
+                    ) : v < x ? (
+                        go(mid + 1, hi)
+                    ) : Right(mid);
+                }
+            };
+            return go(0, xs.length);
+        };
+
+
+        // findRecursive :: a -> [a] -> Either String Int
+        const findIter = (x, xs) => {
+            const [m, l, h] = until(
+                ([mid, lo, hi]) => lo > hi || lo === mid,
+                ([mid, lo, hi]) => {
+                    const
+                        m = div(lo + hi, 2),
+                        v = xs[m];
+                    return v > x ? [
+                        m, lo, m - 1
+                    ] : v < x ? [
+                        m, m + 1, hi
+                    ] : [m, m, hi];
+                },
+                [div(xs.length / 2), 0, xs.length - 1]
+            );
+            return l > h ? (
+                Left('not found')
+            ) : Right(m);
+        };
+
+        // TESTS ------------------------------------------
+
+        const
+            // (pre-sorted AZ)
+            xs = ["alpha", "beta", "delta", "epsilon", "eta", "gamma",
+                "iota", "kappa", "lambda", "mu", "nu", "theta", "zeta"
+            ];
+        return JSON.stringify([
+            'Recursive',
+            map(x => either(
+                    l => "'" + x + "' " + l,
+                    r => "'" + x + "' found at index " + r,
+                    findRecursive(x, xs)
+                ),
+                knuthShuffle(['cape'].concat(xs).concat('cairo'))
+            ),
+            '',
+            'Iterative:',
+            map(x => either(
+                    l => "'" + x + "' " + l,
+                    r => "'" + x + "' found at index " + r,
+                    findIter(x, xs)
+                ),
+                knuthShuffle(['cape'].concat(xs).concat('cairo'))
+            )
+        ], null, 2);
+    };
+
+    // GENERIC FUNCTIONS ----------------------------------
+
+    // Left :: a -> Either a b
+    const Left = x => ({
+        type: 'Either',
+        Left: x
+    });
+
+    // Right :: b -> Either a b
+    const Right = x => ({
+        type: 'Either',
+        Right: x
+    });
+
+    // div :: Int -> Int -> Int
+    const div = (x, y) => Math.floor(x / y);
+
+    // either :: (a -> c) -> (b -> c) -> Either a b -> c
+    const either = (fl, fr, e) =>
+        'Either' === e.type ? (
+            undefined !== e.Left ? (
+                fl(e.Left)
+            ) : fr(e.Right)
+        ) : undefined;
+
+    // Abbreviation for quick testing
+
+    // enumFromTo :: (Int, Int) -> [Int]
+    const enumF
+
+""", "recursion_deep", "C++", 40),
+    (
+"""function binarySearchIterative(haystack, needle) {
+    var mid, low = 0, high = haystack.length - 1;
+
+    while (low <= high) {
+        mid = Math.floor((low + high) / 2);
+        if (haystack[mid] > needle) {
+            high = mid - 1;
+        } else if (haystack[mid] < needle) {
+            low = mid + 1;
+        } else {
+            return mid;
+        }
+    }
+    return null;
+}
+
+""", "recursion_deep", "C++", 40),
+    (
+"""while (low <= high) {
+        mid = Math.floor((low + high) / 2);
+        if (haystack[mid] > needle) {
+            high = mid - 1;
+        } else if (haystack[mid] < needle) {
+            low = mid + 1;
+        } else {
+            return mid;
+        }
+    }
+
+""", "recursion_deep", "C++", 40),
+    (
+"""function binarySearchRecursive(haystack, needle, low, high) {
+    if (high < low) { return null; }
+
+    var mid = Math.floor((low + high) / 2);
+
+    if (haystack[mid] > needle) {
+        return binarySearchRecursive(haystack, needle, low, mid - 1);
+    }
+    if (haystack[mid] < needle) {
+        return binarySearchRecursive(haystack, needle, mid + 1, high);
+    }
+    return mid;
+}
+
+""", "recursion_deep", "C++", 40),
+
+    # hash_set
+    (
+"""printWordFrequency() throws URISyntaxException, IOException {
+    URL url = new URI("https://www.gutenberg.org/files/135/135-0.txt").toURL();
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
+        Pattern pattern = Pattern.compile("(\\\\w+)");
+        Matcher matcher;
+        String line;
+        String word;
+        Map<String, Integer> map = new HashMap<>();
+        while ((line = reader.readLine()) != null) {
+            matcher = pattern.matcher(line);
+            while (matcher.find()) {
+                word = matcher.group().toLowerCase();
+                if (map.containsKey(word)) {
+                    map.put(word, map.get(word) + 1);
+                } else {
+                    map.put(word, 1);
+                }
+            }
+        }
+        /* print out top 10 */
+        List<Map.Entry<String, Integer>> list = new ArrayList<>(map.entrySet());
+        list.sort(Map.Entry.comparingByValue());
+        Collections.reverse(list);
+        int count = 1;
+        for (Map.Entry<String, Integer> value : list) {
+            System.out.printf("%-20s%,7d%n", value.getKey(), value.getValue());
+            if (count++ == 10) break;
+        }
+    }
+}
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static void main(String[] args) throws IOException {
+        Path path = Paths.get("135-0.txt");
+        byte[] bytes = Files.readAllBytes(path);
+        String text = new String(bytes);
+        text = text.toLowerCase();
+
+        Pattern r = Pattern.compile("\\\\p{javaLowerCase}+");
+        Matcher matcher = r.matcher(text);
+        Map<String, Integer> freq = new HashMap<>();
+        while (matcher.find()) {
+            String word = matcher.group();
+            Integer current = freq.getOrDefault(word, 0);
+            freq.put(word, current + 1);
+        }
+
+        List<Map.Entry<String, Integer>> entries = freq.entrySet()
+            .stream()
+            .sorted((i1, i2) -> Integer.compare(i2.getValue(), i1.getValue()))
+            .limit(10)
+            .collect(Collectors.toList());
+
+        System.out.println("Rank  Word  Frequency");
+        System.out.println("====  ====  =========");
+        int rank = 1;
+        for (Map.Entry<String, Integer> entry : entries) {
+            String word = entry.getKey();
+            Integer count = entry.getValue();
+            System.out.printf("%2d    %-4s    %5d\\n", rank++, word, count);
+        }
+    }
+
+""", "hash_set", "Rust", 58),
+    (
+"""for (Map.Entry<String, Integer> entry : entries) {
+            String word = entry.getKey();
+            Integer count = entry.getValue();
+            System.out.printf("%2d    %-4s    %5d\\n", rank++, word, count);
+        }
+
+""", "hash_set", "Rust", 58),
+    (
+"""static String print(Map<Integer, Integer> frequencies) {
+    StringBuilder string = new StringBuilder();
+    int key;
+    for (Map.Entry<Integer, Integer> entry : frequencies.entrySet()) {
+        key = entry.getKey();
+        string.append("%,-8d".formatted(entry.getValue()));
+        /* display the hexadecimal value for non-printable characters */
+        if ((key >= 0 && key < 32) || key == 127) {
+            string.append("%02x%n".formatted(key));
+        } else {
+            string.append("%s%n".formatted((char) key));
+        }
+    }
+    return string.toString();
+}
+
+""", "hash_set", "Rust", 58),
+    (
+"""static Map<Integer, Integer> frequencies(String path) throws IOException {
+    try (InputStreamReader reader = new InputStreamReader(new FileInputStream(path))) {
+        /* key = character, and value = occurrences */
+        Map<Integer, Integer> map = new HashMap<>();
+        int value;
+        while ((value = reader.read()) != -1) {
+            if (map.containsKey(value)) {
+                map.put(value, map.get(value) + 1);
+            } else {
+                map.put(value, 1);
+            }
+        }
+        return map;
+    }
+}
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static int[] countLetters(String filename) throws IOException{
+		int[] freqs = new int[26];
+		BufferedReader in = new BufferedReader(new FileReader(filename));
+		String line;
+		while((line = in.readLine()) != null){
+			line = line.toUpperCase();
+			for(char ch:line.toCharArray()){
+				if(Character.isLetter(ch)){
+					freqs[ch - 'A']++;
+				}
+			}
+		}
+		in.close();
+		return freqs;
+	}
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static int[] countLetters(String filename) throws IOException{
+	int[] freqs = new int[26];
+	try(BufferedReader in = new BufferedReader(new FileReader(filename))){
+		String line;
+		while((line = in.readLine()) != null){
+			line = line.toUpperCase();
+			for(char ch:line.toCharArray()){
+				if(Character.isLetter(ch)){
+					freqs[ch - 'A']++;
+				}
+			}
+		}
+	}
+	return freqs;
+}
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static Map<Integer, Long> countLetters(String filename) throws IOException {
+    return Files.lines(Paths.get(filename))
+        .flatMapToInt(String::chars)
+        .filter(Character::isLetter)
+        .boxed()
+        .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+}
+
+""", "hash_set", "Rust", 58),
+    (
+"""(function(txt) {
+
+    var cs = txt.split(''),
+        i = cs.length,
+        dct =  {},
+        c = '',
+        keys;
+        
+    while (i--) {
+        c = cs[i];
+        dct[c] = (dct[c] || 0) + 1;
+    }
+    
+    keys = Object.keys(dct);
+    keys.sort();
+    return keys.map(function (c) { return [c, dct[c]]; });
+
+})("Not all that Mrs. Bennet, however, with the assistance of her five\\
+daughters, could ask on the subject, was sufficient to draw from her\\
+husband any satisfactory description of Mr. Bingley. They attacked him\\
+in various ways--with barefaced questions, ingenious suppositions, and\\
+distant surmises; but he eluded the skill of them all, and they were at\\
+last obliged to accept the second-hand intelligence of their neighbour,\\
+Lady Lucas. Her report was highly favourable. Sir William had been\\
+delighted with him. He was quite young, wonderfully handsome, extremely\\
+agreeable, and, to crown the whole, he meant to be at the next assembly\\
+with a large party. Nothing could be more delightful! To be fond of\\
+dancing was a certain step towards falling in love; and very lively\\
+hopes of Mr. Bingley's heart were entertained.");
+
+""", "hash_set", "Rust", 58),
+    (
+"""[[" ", 121], ["!", 1], ["'", 1], [",", 13], ["-", 3], [".", 9], [";", 2], 
+["B", 3], ["H", 2], ["L", 2], ["M", 3], ["N", 2], ["S", 1], ["T", 2], ["W", 1], 
+["a", 53], ["b", 13], ["c", 17], ["d", 29], ["e", 82], ["f", 17], ["g", 16], ["h", 36],
+["i", 44], ["j", 1], ["k", 3], ["l", 34], ["m", 11], ["n", 41], ["o", 40], ["p", 8], 
+["q", 2], ["r", 35], ["s", 39], ["t", 55], ["u", 20], ["v", 7], ["w", 17], ["x", 2], ["y", 16]]
+
+""", "hash_set", "Rust", 58),
+    (
+"""(() => {
+    'use strict';
+
+
+    // charCounts :: String -> [(Char, Int)]
+    const charCounts = s =>
+        sortBy(flip(comparing(snd)))(
+            Object.entries(
+                chars(s).reduce(
+                    (a, c) => (
+                        a[c] = 1 + (a[c] || 0),
+                        a
+                    ), {}
+                )
+            )
+        );
+
+    // ----------------------- TEST -----------------------
+    // main :: IO ()
+    const main = () =>
+        either(msg => msg)(
+            compose(
+                unlines,
+                map(JSON.stringify),
+                charCounts
+            )
+        )(readFileLR('~/Code/charCount/miserables.txt'));
+
+
+    // -----------------GENERIC FUNCTIONS -----------------
+
+    // Left :: a -> Either a b
+    const Left = x => ({
+        type: 'Either',
+        Left: x
+    });
+
+
+    // Right :: b -> Either a b
+    const Right = x => ({
+        type: 'Either',
+        Right: x
+    });
+
+
+    // chars :: String -> [Char]
+    const chars = s =>
+        s.split('');
+
+
+    // comparing :: (a -> b) -> (a -> a -> Ordering)
+    const comparing = f =>
+        x => y => {
+            const
+                a = f(x),
+                b = f(y);
+            return a < b ? -1 : (a > b ? 1 : 0);
+        };
+
+    // compose (<<<) :: (b -> c) -> (a -> b) -> a -> c
+    const compose = (...fs) =>
+        fs.reduce(
+            (f, g) => x => f(g(x)),
+            x => x
+        );
+
+    // either :: (a -> c) -> (b -> c) -> Either a b -> c
+    const either = fl =>
+        fr => e => 'Either' === e.type ? (
+            undefined !== e.Left ? (
+                fl(e.Left)
+            ) : fr(e.Right)
+        ) : undefined;
+
+
+    // flip :: (a -> b -> c) -> b -> a -> c
+    const flip = f =>
+        1 < f.length ? (
+            (a, b) => f(b, a)
+        ) : (x => y => f(y)(x));
+
+
+    // map :: (a -> b) -> [a] -> [b]
+    const map = f =>
+        // The list obtained by applying f
+        // to each element of xs.
+        // (The image of xs under f).
+        xs => (
+            Array.isArray(xs) ? (
+                xs
+            ) : xs.split('')
+        ).map(f);
+
+
+    // readFileLR :: FilePath -> Either String IO String
+    const readFileLR = fp => {
+        const
+            e = $(),
+            ns = $.NSString
+            .stringWithContentsOfFileEncodingError(
+                $(fp).stringByStandardizingPath,
+                $.NSUTF8StringEncoding,
+                e
+            );
+        return ns.isNil() ? (
+            Left(ObjC.unwrap(e.localizedDescription))
+        ) : Right(ObjC.unwrap(ns));
+    };
+
+
+    // snd :: (a, b) -> b
+    const snd = tpl => tpl[1];
+
+
+    // sortBy :: (a -> a -> Ordering) -> [a] -> [a]
+    const sortBy = f =>
+        xs => xs.slice()
+        .sort((a, b) => f(a)(b));
+
+
+    // unlines :: [String] -> String
+    const unlines = xs =>
+        // A single string formed by the intercalation
+        // of a list of strings with the newline character.
+        xs.join('\\n');
+
+    // M
+
+""", "hash_set", "Rust", 58),
+    (
+"""(() => {
+    'use strict';
+
+    const letterfreq = text => [...text]
+        .reduce(
+            (a, c) => (a[c] = (a[c] || 0) + 1, a), 
+            {}
+        );
+
+    return JSON.stringify(
+        letterfreq(
+            `remember, remember, the fifth of november
+             gunpowder treason and plot
+             I see no reason why gunpowder treason
+             should ever be forgot`
+        ),
+        null, 2
+    );
+})();
+
+""", "hash_set", "Rust", 58),
+    (
+"""countSubstring(String string, String substring) {
+    substring = Pattern.quote(substring);
+    Pattern pattern = Pattern.compile(substring);
+    Matcher matcher = pattern.matcher(string);
+    int count = 0;
+    while (matcher.find())
+        count++;
+    return count;
+}
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static void main(String[] args){
+		System.out.println(countSubstring("th", "the three truths"));
+		System.out.println(countSubstring("abab", "ababababab"));
+		System.out.println(countSubstring("a*b", "abaabba*bbaba*bbab"));
+	}
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static int countSubstring(String subStr, String str){
+		// the result of split() will contain one more element than the delimiter
+		// the "-1" second argument makes it not discard trailing empty strings
+		return str.split(Pattern.quote(subStr), -1).length - 1;
+	}
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static void main(String[] args){
+		System.out.println(countSubstring("th", "the three truths"));
+		System.out.println(countSubstring("abab", "ababababab"));
+		System.out.println(countSubstring("a*b", "abaabba*bbaba*bbab"));
+	}
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static int countSubstring(String subStr, String str){
+		int count = 0;
+		for (int loc = str.indexOf(subStr); loc != -1;
+		     loc = str.indexOf(subStr, loc + subStr.length()))
+			count++;
+		return count;
+	}
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static void main(String[] args){
+		System.out.println(countSubstring("th", "the three truths"));
+		System.out.println(countSubstring("abab", "ababababab"));
+		System.out.println(countSubstring("a*b", "abaabba*bbaba*bbab"));
+	}
+
+""", "hash_set", "Rust", 58),
+    (
+"""function countSubstring(str, subStr) {
+    var matches = str.match(new RegExp(subStr, "g"));
+    return matches ? matches.length : 0;
+}
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static void main(String[] args) {
+        System.out.printf("%-40s  %2s  %10s  %8s  %s  %s%n", "String", "Length", "All Unique", "1st Diff", "Hex", "Positions");
+        System.out.printf("%-40s  %2s  %10s  %8s  %s  %s%n", "------------------------", "------", "----------", "--------", "---", "---------");
+        for ( String s : new String[] {"", ".", "abcABC", "XYZ ZYX", "1234567890ABCDEFGHIJKLMN0PQRSTUVWXYZ"} ) {
+            processString(s);
+        }
+    }
+
+""", "hash_set", "Rust", 58),
+    (
+"""private static void processString(String input) {
+        Map<Character,Integer> charMap = new HashMap<>(); 
+        char dup = 0;
+        int index = 0;
+        int pos1 = -1;
+        int pos2 = -1;
+        for ( char key : input.toCharArray() ) {
+            index++;
+            if ( charMap.containsKey(key) ) {
+                dup = key;
+                pos1 = charMap.get(key);
+                pos2 = index;
+                break;
+            }
+            charMap.put(key, index);
+        }
+        String unique = dup == 0 ? "yes" : "no";
+        String diff = dup == 0 ? "" : "'" + dup + "'";
+        String hex = dup == 0 ? "" : Integer.toHexString(dup).toUpperCase();
+        String position = dup == 0 ? "" : pos1 + " " + pos2;
+        System.out.printf("%-40s  %-6d  %-10s  %-8s  %-3s  %-5s%n", input, input.length(), unique, diff, hex, position);
+    }
+
+""", "hash_set", "Rust", 58),
+    (
+"""public static void main(String[] aArgs) {
+		List<String> words = List.of( "", ".", "abcABC", "XYZ ZYX", "1234567890ABCDEFGHIJKLMN0PQRSTUVWXYZ" );
+		
+		for ( String word : words ) {		
+			Set<Integer> seen = new HashSet<Integer>();
+	        OptionalInt first = word.chars().filter( ch -> ! seen.add(ch) ).findFirst();
+	        if ( first.isPresent() ) {	            
+	            final char ch = (char) first.getAsInt();
+	            final String hex = Integer.toHexString(ch).toUpperCase();
+	            System.out.println("Word: \\"" + word + "\\" contains a repeated character.");
+	            System.out.println("Character '" + ch + "' (hex " + hex + ") occurs at positions "
+	            	+ word.indexOf(ch) + " and " + word.indexOf(ch, word.indexOf(ch) + 1));
+	        } else {
+	        	System.out.println("Word: \\"" + word + "\\" has all unique characters.");
+	        }
+	        System.out.println();			
+		}
+	}
+
+""", "hash_set", "Rust", 58),
+    (
+"""for ( String word : words ) {		
+			Set<Integer> seen = new HashSet<Integer>();
+	        OptionalInt first = word.chars().filter( ch -> ! seen.add(ch) ).findFirst();
+	        if ( first.isPresent() ) {	            
+	            final char ch = (char) first.getAsInt();
+	            final String hex = Integer.toHexString(ch).toUpperCase();
+	            System.out.println("Word: \\"" + word + "\\" contains a repeated character.");
+	            System.out.println("Character '" + ch + "' (hex " + hex + ") occurs at positions "
+	            	+ word.indexOf(ch) + " and " + word.indexOf(ch, word.indexOf(ch) + 1));
+	        } else {
+	        	System.out.println("Word: \\"" + word + "\\" has all unique characters.");
+	        }
+	        System.out.println();			
+		}
+
+""", "hash_set", "Rust", 58),
+    (
+"""enumFrom(x) {
+        let v = x;
+        while (true) {
+            yield v;
+            v = 1 + v;
+        }
+    }
+
+""", "hash_set", "Rust", 58),
+    (
+"""enumFrom(x) {
+        let v = x;
+        while (true) {
+            yield v;
+            v = 1 + v;
+        }
+    }
+
+""", "hash_set", "Rust", 58),
+
+    # matrix
+    (
+"""public static double[][] mult(double a[][], double b[][]){//a[m][n], b[n][p]
+   if(a.length == 0) return new double[0][0];
+   if(a[0].length != b.length) return null; //invalid dims
+
+   int n = a[0].length;
+   int m = a.length;
+   int p = b[0].length;
+
+   double ans[][] = new double[m][p];
+
+   for(int i = 0;i < m;i++){
+      for(int j = 0;j < p;j++){
+         for(int k = 0;k < n;k++){
+            ans[i][j] += a[i][k] * b[k][j];
+         }
+      }
+   }
+   return ans;
+}
+
+""", "matrix", "C", 56),
+    (
+"""for(int i = 0;i < m;i++){
+      for(int j = 0;j < p;j++){
+         for(int k = 0;k < n;k++){
+            ans[i][j] += a[i][k] * b[k][j];
+         }
+      }
+   }
+
+""", "matrix", "C", 56),
+    (
+"""for(int j = 0;j < p;j++){
+         for(int k = 0;k < n;k++){
+            ans[i][j] += a[i][k] * b[k][j];
+         }
+      }
+
+""", "matrix", "C", 56),
+    (
+"""function(other) {
+    if (this.width != other.height) {
+        throw "error: incompatible sizes";
+    }
+
+    var result = [];
+    for (var i = 0; i < this.height; i++) {
+        result[i] = [];
+        for (var j = 0; j < other.width; j++) {
+            var sum = 0;
+            for (var k = 0; k < this.width; k++) {
+                sum += this.mtx[i][k] * other.mtx[k][j];
+            }
+            result[i][j] = sum;
+        }
+    }
+    return new Matrix(result); 
+}
+
+""", "matrix", "C", 56),
+    (
+"""for (var i = 0; i < this.height; i++) {
+        result[i] = [];
+        for (var j = 0; j < other.width; j++) {
+            var sum = 0;
+            for (var k = 0; k < this.width; k++) {
+                sum += this.mtx[i][k] * other.mtx[k][j];
+            }
+            result[i][j] = sum;
+        }
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for (var j = 0; j < other.width; j++) {
+            var sum = 0;
+            for (var k = 0; k < this.width; k++) {
+                sum += this.mtx[i][k] * other.mtx[k][j];
+            }
+            result[i][j] = sum;
+        }
+
+""", "matrix", "C", 56),
+    (
+"""[[n]] 
+    function matrixMultiply(a, b) {
+        var bCols = transpose(b);
+
+        return a.map(function (aRow) {
+            return bCols.map(function (bCol) {
+                return dotProduct(aRow, bCol);
+            });
+        });
+    }
+
+""", "matrix", "C", 56),
+    (
+"""[c]
+    function zipWith(f, xs, ys) {
+        return xs.length === ys.length ? (
+            xs.map(function (x, i) {
+                return f(x, ys[i]);
+            })
+        ) : undefined;
+    }
+
+""", "matrix", "C", 56),
+    (
+"""[[a]]
+    function transpose(lst) {
+        return lst[0].map(function (_, iCol) {
+            return lst.map(function (row) {
+                return row[iCol];
+            });
+        });
+    }
+
+""", "matrix", "C", 56),
+    (
+"""a
+    function sum(xs) {
+        return xs.reduce(function (a, x) {
+            return a + x;
+        }, 0);
+    }
+
+""", "matrix", "C", 56),
+    (
+"""((() => {
+    "use strict";
+
+    // -------------- MATRIX MULTIPLICATION --------------
+
+    // matrixMultiply :: Num a => [[a]] -> [[a]] -> [[a]]
+    const matrixMultiply = a =>
+        b => {
+            const cols = transpose(b);
+
+            return a.map(
+                compose(
+                    f => cols.map(f),
+                    dotProduct
+                )
+            );
+        };
+
+
+    // ---------------------- TEST -----------------------
+    const main = () =>
+        JSON.stringify(matrixMultiply(
+            [
+                [-1, 1, 4],
+                [6, -4, 2],
+                [-3, 5, 0],
+                [3, 7, -2]
+            ]
+        )([
+            [-1, 1, 4, 8],
+            [6, 9, 10, 2],
+            [11, -4, 5, -3]
+        ]));
+
+
+    // --------------------- GENERIC ---------------------
+
+    // compose (<<<) :: (b -> c) -> (a -> b) -> a -> c
+    const compose = (...fs) =>
+        // A function defined by the right-to-left
+        // composition of all the functions in fs.
+        fs.reduce(
+            (f, g) => x => f(g(x)),
+            x => x
+        );
+
+
+    // dotProduct :: Num a => [[a]] -> [[a]] -> [[a]]
+    const dotProduct = xs =>
+        // Sum of the products of the corresponding
+        // values in two lists of the same length.
+        compose(sum, zipWith(mul)(xs));
+
+
+    // mul :: Num a => a -> a -> a
+    const mul = a =>
+        b => a * b;
+
+
+    // sum :: (Num a) => [a] -> a
+    const sum = xs =>
+        xs.reduce((a, x) => a + x, 0);
+
+
+    // transpose :: [[a]] -> [[a]]
+    const transpose = rows =>
+        // The columns of the input transposed
+        // into new rows.
+        // Simpler version of transpose, assuming input
+        // rows of even length.
+        Boolean(rows.length) ? rows[0].map(
+            (_, i) => rows.flatMap(
+                v => v[i]
+            )
+        ) : [];
+
+
+    // zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+    const zipWith = f =>
+        // A list constructed by zipping with a
+        // custom function, rather than with the
+        // default tuple constructor.
+        xs => ys => xs.map(
+            (x, i) => f(x)(ys[i])
+        ).slice(
+            0, Math.min(xs.length, ys.length)
+        );
+
+    // MAIN ---
+    return main();
+}))();
+
+""", "matrix", "C", 56),
+    (
+"""/* Matrix multiplication, in Jsish */
+require('Matrix');
+
+if (Interp.conf('unitTest')) {
+    var a = new Matrix([[1,2],[3,4]]);
+    var b = new Matrix([[-3,-8,3],[-2,1,4]]);
+;    a;
+;    b;
+;    a.mult(b);
+}
+
+/*
+=!EXPECTSTART!=
+a ==> { height:2, mtx:[ [ 1, 2 ], [ 3, 4 ] ], width:2 }
+b ==> { height:2, mtx:[ [ -3, -8, 3 ], [ -2, 1, 4 ] ], width:3 }
+a.mult(b) ==> { height:2, mtx:[ [ -7, -6, 11 ], [ -17, -20, 25 ] ], width:3 }
+=!EXPECTEND!=
+*/
+
+""", "matrix", "C", 56),
+    (
+"""public static void main(String[] args){
+               double[][] m = {{1, 1, 1, 1},
+                               {2, 4, 8, 16},
+                               {3, 9, 27, 81},
+                               {4, 16, 64, 256},
+                               {5, 25, 125, 625}};
+               double[][] ans = new double[m[0].length][m.length];
+               for(int rows = 0; rows < m.length; rows++){
+                       for(int cols = 0; cols < m[0].length; cols++){
+                               ans[cols][rows] = m[rows][cols];
+                       }
+               }
+               for(double[] i:ans){//2D arrays are arrays of arrays
+                       System.out.println(Arrays.toString(i));
+               }
+       }
+
+""", "matrix", "C", 56),
+    (
+"""for(int rows = 0; rows < m.length; rows++){
+                       for(int cols = 0; cols < m[0].length; cols++){
+                               ans[cols][rows] = m[rows][cols];
+                       }
+               }
+
+""", "matrix", "C", 56),
+    (
+"""Matrix(ary) {
+    this.mtx = ary
+    this.height = ary.length;
+    this.width = ary[0].length;
+}
+
+""", "matrix", "C", 56),
+    (
+"""function() {
+    var s = []
+    for (var i = 0; i < this.mtx.length; i++) 
+        s.push( this.mtx[i].join(",") );
+    return s.join("\\n");
+}
+
+""", "matrix", "C", 56),
+    (
+"""function() {
+    var transposed = [];
+    for (var i = 0; i < this.width; i++) {
+        transposed[i] = [];
+        for (var j = 0; j < this.height; j++) {
+            transposed[i][j] = this.mtx[j][i];
+        }
+    }
+    return new Matrix(transposed);
+}
+
+""", "matrix", "C", 56),
+    (
+"""for (var i = 0; i < this.width; i++) {
+        transposed[i] = [];
+        for (var j = 0; j < this.height; j++) {
+            transposed[i][j] = this.mtx[j][i];
+        }
+    }
+
+""", "matrix", "C", 56),
+    (
+"""function transpose(lst) {
+        return lst[0].map(function (_, iCol) {
+            return lst.map(function (row) {
+                return row[iCol];
+            })
+        });
+    }
+
+""", "matrix", "C", 56),
+    (
+"""(() => {
+    "use strict";
+
+    // transpose :: [[a]] -> [[a]]
+    const transpose = xs =>
+        0 < xs.length ? (
+            xs[0].map(
+                (_, iCol) => xs.map(
+                    row => row[iCol]
+                )
+            )
+        ) : [];
+
+
+    // ---------------------- TEST -----------------------
+    const main = () =>
+        JSON.stringify(
+            transpose([
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]
+            ])
+        );
+
+
+    // MAIN ---
+    return main();
+})();
+
+""", "matrix", "C", 56),
+    (
+"""function Matrix(ary) {
+    this.mtx = ary;
+    this.height = ary.length;
+    this.width = ary[0].length;
+}
+
+""", "matrix", "C", 56),
+    (
+"""function() {
+    var s = [];
+    for (var i = 0; i < this.mtx.length; i++) s.push(this.mtx[i].join(","));
+    return s.join("\\n");
+}
+
+""", "matrix", "C", 56),
+    (
+"""function() {
+    var transposed = [];
+    for (var i = 0; i < this.width; i++) {
+        transposed[i] = [];
+        for (var j = 0; j < this.height; j++) transposed[i][j] = this.mtx[j][i];
+    }
+    return new Matrix(transposed);
+}
+
+""", "matrix", "C", 56),
+    (
+"""function(other) {
+    if (this.width != other.height) throw "error: incompatible sizes";
+ 
+    var result = [];
+    for (var i = 0; i < this.height; i++) {
+        result[i] = [];
+        for (var j = 0; j < other.width; j++) {
+            var sum = 0;
+            for (var k = 0; k < this.width; k++) sum += this.mtx[i][k] * other.mtx[k][j];
+            result[i][j] = sum;
+        }
+    }
+    return new Matrix(result);
+}
+
+""", "matrix", "C", 56),
+    (
+"""for (var i = 0; i < this.height; i++) {
+        result[i] = [];
+        for (var j = 0; j < other.width; j++) {
+            var sum = 0;
+            for (var k = 0; k < this.width; k++) sum += this.mtx[i][k] * other.mtx[k][j];
+            result[i][j] = sum;
+        }
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for (var j = 0; j < other.width; j++) {
+            var sum = 0;
+            for (var k = 0; k < this.width; k++) sum += this.mtx[i][k] * other.mtx[k][j];
+            result[i][j] = sum;
+        }
+
+""", "matrix", "C", 56),
+    (
+"""of Matrix
+function IdentityMatrix(n) {
+    this.height = n;
+    this.width = n;
+    this.mtx = [];
+    for (var i = 0; i < n; i++) {
+        this.mtx[i] = [];
+        for (var j = 0; j < n; j++) this.mtx[i][j] = (i == j ? 1 : 0);
+    }
+}
+
+""", "matrix", "C", 56),
+    (
+"""function(n) {
+    var result = new IdentityMatrix(this.height);
+    for (var i = 1; i <= n; i++) result = result.mult(this);
+    return result;
+}
+
+""", "matrix", "C", 56),
+    (
+"""/* Matrix transposition, in Jsish */
+require('Matrix');
+
+if (Interp.conf('unitTest')) {
+    var m = new Matrix([[1,1,1,1],[2,4,8,16],[3,9,27,81],[4,16,64,256],[5,25,125,625]]);
+;    m;
+;    m.transpose();
+}
+
+/*
+=!EXPECTSTART!=
+m ==> { height:5, mtx:[ [ 1, 1, 1, 1 ], [ 2, 4, 8, 16 ], [ 3, 9, 27, 81 ], [ 4, 16, 64, 256 ], [ 5, 25, 125, 625 ] ], width:4 }
+m.transpose() ==> { height:4, mtx:[ [ 1, 2, 3, 4, 5 ], [ 1, 4, 9, 16, 25 ], [ 1, 8, 27, 64, 125 ], [ 1, 16, 81, 256, 625 ] ], width:5 }
+=!EXPECTEND!=
+*/
+
+""", "matrix", "C", 56),
+    (
+"""public static double solve(double[][] a, double[][] b) {
+        if (a == null || b == null || a.length == 0 || b.length == 0) {
+            throw new IllegalArgumentException("Invalid dimensions");
+        }
+        
+        int n = b.length, p = b[0].length;
+        if (a.length != n || a[0].length != n) {
+            throw new IllegalArgumentException("Invalid dimensions");
+        }
+
+        double det = 1.0;
+        
+        for (int i = 0; i < n - 1; i++) {
+            int k = i;
+            for (int j = i + 1; j < n; j++) {
+                if (Math.abs(a[j][i]) > Math.abs(a[k][i])) {
+                    k = j;
+                }
+            }
+            
+            if (k != i) {
+                det = -det;
+                
+                for (int j = i; j < n; j++) {
+                    double s = a[i][j];
+                    a[i][j] = a[k][j];
+                    a[k][j] = s;
+                }
+
+                for (int j = 0; j < p; j++) {
+                    double s = b[i][j];
+                    b[i][j] = b[k][j];
+                    b[k][j] = s;
+                }
+            }
+            
+            for (int j = i + 1; j < n; j++) {
+                double s = a[j][i] / a[i][i];
+                for (k = i + 1; k < n; k++) {
+                    a[j][k] -= s * a[i][k];
+                }
+                
+                for (k = 0; k < p; k++) {
+                    b[j][k] -= s * b[i][k];
+                }
+            }
+        }
+        
+        for (int i = n - 1; i >= 0; i--) {
+            for (int j = i + 1; j < n; j++) {
+                double s = a[i][j];
+                for (int k = 0; k < p; k++) {
+                    b[i][k] -= s * b[j][k];
+                }
+            }
+            double s = a[i][i];
+            det *= s;
+            for (int k = 0; k < p; k++) {
+                b[i][k] /= s;
+            }
+        }
+        
+        return det;
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = 0; i < n - 1; i++) {
+            int k = i;
+            for (int j = i + 1; j < n; j++) {
+                if (Math.abs(a[j][i]) > Math.abs(a[k][i])) {
+                    k = j;
+                }
+            }
+            
+            if (k != i) {
+                det = -det;
+                
+                for (int j = i; j < n; j++) {
+                    double s = a[i][j];
+                    a[i][j] = a[k][j];
+                    a[k][j] = s;
+                }
+
+                for (int j = 0; j < p; j++) {
+                    double s = b[i][j];
+                    b[i][j] = b[k][j];
+                    b[k][j] = s;
+                }
+            }
+            
+            for (int j = i + 1; j < n; j++) {
+                double s = a[j][i] / a[i][i];
+                for (k = i + 1; k < n; k++) {
+                    a[j][k] -= s * a[i][k];
+                }
+                
+                for (k = 0; k < p; k++) {
+                    b[j][k] -= s * b[i][k];
+                }
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""for (int j = i + 1; j < n; j++) {
+                if (Math.abs(a[j][i]) > Math.abs(a[k][i])) {
+                    k = j;
+                }
+            }
+
+""", "matrix", "C", 56),
+    (
+"""if (k != i) {
+                det = -det;
+                
+                for (int j = i; j < n; j++) {
+                    double s = a[i][j];
+                    a[i][j] = a[k][j];
+                    a[k][j] = s;
+                }
+
+                for (int j = 0; j < p; j++) {
+                    double s = b[i][j];
+                    b[i][j] = b[k][j];
+                    b[k][j] = s;
+                }
+            }
+
+""", "matrix", "C", 56),
+    (
+"""for (int j = i; j < n; j++) {
+                    double s = a[i][j];
+                    a[i][j] = a[k][j];
+                    a[k][j] = s;
+                }
+
+""", "matrix", "C", 56),
+    (
+"""for (int j = 0; j < p; j++) {
+                    double s = b[i][j];
+                    b[i][j] = b[k][j];
+                    b[k][j] = s;
+                }
+
+""", "matrix", "C", 56),
+    (
+"""for (int j = i + 1; j < n; j++) {
+                double s = a[j][i] / a[i][i];
+                for (k = i + 1; k < n; k++) {
+                    a[j][k] -= s * a[i][k];
+                }
+                
+                for (k = 0; k < p; k++) {
+                    b[j][k] -= s * b[i][k];
+                }
+            }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = n - 1; i >= 0; i--) {
+            for (int j = i + 1; j < n; j++) {
+                double s = a[i][j];
+                for (int k = 0; k < p; k++) {
+                    b[i][k] -= s * b[j][k];
+                }
+            }
+            double s = a[i][i];
+            det *= s;
+            for (int k = 0; k < p; k++) {
+                b[i][k] /= s;
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""for (int j = i + 1; j < n; j++) {
+                double s = a[i][j];
+                for (int k = 0; k < p; k++) {
+                    b[i][k] -= s * b[j][k];
+                }
+            }
+
+""", "matrix", "C", 56),
+    (
+"""public static void main(String[] args) {
+        double[][] a = new double[][] {{4.0, 1.0, 0.0, 0.0, 0.0},
+                                       {1.0, 4.0, 1.0, 0.0, 0.0},
+                                       {0.0, 1.0, 4.0, 1.0, 0.0},
+                                       {0.0, 0.0, 1.0, 4.0, 1.0},
+                                       {0.0, 0.0, 0.0, 1.0, 4.0}};
+
+        double[][] b = new double[][] {{1.0 / 2.0},
+                                       {2.0 / 3.0},
+                                       {3.0 / 4.0},
+                                       {4.0 / 5.0},
+                                       {5.0 / 6.0}};
+                                       
+        double[] x = {39.0 / 400.0,
+                      11.0 / 100.0,
+                      31.0 / 240.0,
+                      37.0 / 300.0,
+                      71.0 / 400.0};
+                                       
+        System.out.println("det: " + solve(a, b));
+        
+
+        for (int i = 0; i < 5; i++) {
+            System.out.printf(Locale.US, "%12.8f %12.4e\\n", b[i][0], b[i][0] - x[i]);
+        }
+    }
+
+""", "matrix", "C", 56),
+    (
+"""Lower Upper Solver
+function lusolve(A, b, update) {
+	var lu = ludcmp(A, update)
+	if (lu === undefined) return // Singular Matrix!
+	return lubksb(lu, b, update)
+}
+
+""", "matrix", "C", 56),
+    (
+"""Lower Upper Decomposition
+function ludcmp(A, update) {
+	// A is a matrix that we want to decompose into Lower and Upper matrices.
+	var d = true
+	var n = A.length
+	var idx = new Array(n) // Output vector with row permutations from partial pivoting
+	var vv = new Array(n)  // Scaling information
+
+	for (var i=0; i<n; i++) {
+		var max = 0
+		for (var j=0; j<n; j++) {
+			var temp = Math.abs(A[i][j])
+			if (temp > max) max = temp
+		}
+		if (max == 0) return // Singular Matrix!
+		vv[i] = 1 / max // Scaling
+	}
+	
+	if (!update) { // make a copy of A 
+		var Acpy = new Array(n)
+		for (var i=0; i<n; i++) {		
+			var Ai = A[i] 
+			Acpyi = new Array(Ai.length)
+			for (j=0; j<Ai.length; j+=1) Acpyi[j] = Ai[j]
+			Acpy[i] = Acpyi
+		}
+		A = Acpy
+	}
+	
+	var tiny = 1e-20 // in case pivot element is zero
+	for (var i=0; ; i++) {
+		for (var j=0; j<i; j++) {
+			var sum = A[j][i]
+			for (var k=0; k<j; k++) sum -= A[j][k] * A[k][i];
+			A[j][i] = sum
+		}
+		var jmax = 0
+		var max = 0;
+		for (var j=i; j<n; j++) {
+			var sum = A[j][i]
+			for (var k=0; k<i; k++) sum -= A[j][k] * A[k][i];
+			A[j][i] = sum
+			var temp = vv[j] * Math.abs(sum)
+			if (temp >= max) {
+				max = temp
+				jmax = j
+			}
+		}
+		if (i <= jmax) {
+			for (var j=0; j<n; j++) {
+				var temp = A[jmax][j]
+				A[jmax][j] = A[i][j]
+				A[i][j] = temp
+			}
+			d = !d;
+			vv[jmax] = vv[i]
+		}
+		idx[i] = jmax;
+		if (i == n-1) break;
+		var temp = A[i][i]
+		if (temp == 0) A[i][i] = temp = tiny
+		temp = 1 / temp
+		for (var j=i+1; j<n; j++) A[j][i] *= temp
+	}
+	return {A:A, idx:idx, d:d}
+}
+
+""", "matrix", "C", 56),
+    (
+"""Scaling information
+
+	for (var i=0; i<n; i++) {
+		var max = 0
+		for (var j=0; j<n; j++) {
+			var temp = Math.abs(A[i][j])
+			if (temp > max) max = temp
+		}
+		if (max == 0) return // Singular Matrix!
+		vv[i] = 1 / max // Scaling
+	}
+
+""", "matrix", "C", 56),
+    (
+"""0
+		for (var j=0; j<n; j++) {
+			var temp = Math.abs(A[i][j])
+			if (temp > max) max = temp
+		}
+
+""", "matrix", "C", 56),
+    (
+"""if (!update) { // make a copy of A 
+		var Acpy = new Array(n)
+		for (var i=0; i<n; i++) {		
+			var Ai = A[i] 
+			Acpyi = new Array(Ai.length)
+			for (j=0; j<Ai.length; j+=1) Acpyi[j] = Ai[j]
+			Acpy[i] = Acpyi
+		}
+		A = Acpy
+	}
+
+""", "matrix", "C", 56),
+    (
+"""for (var i=0; i<n; i++) {		
+			var Ai = A[i] 
+			Acpyi = new Array(Ai.length)
+			for (j=0; j<Ai.length; j+=1) Acpyi[j] = Ai[j]
+			Acpy[i] = Acpyi
+		}
+
+""", "matrix", "C", 56),
+    (
+"""in case pivot element is zero
+	for (var i=0; ; i++) {
+		for (var j=0; j<i; j++) {
+			var sum = A[j][i]
+			for (var k=0; k<j; k++) sum -= A[j][k] * A[k][i];
+			A[j][i] = sum
+		}
+		var jmax = 0
+		var max = 0;
+		for (var j=i; j<n; j++) {
+			var sum = A[j][i]
+			for (var k=0; k<i; k++) sum -= A[j][k] * A[k][i];
+			A[j][i] = sum
+			var temp = vv[j] * Math.abs(sum)
+			if (temp >= max) {
+				max = temp
+				jmax = j
+			}
+		}
+		if (i <= jmax) {
+			for (var j=0; j<n; j++) {
+				var temp = A[jmax][j]
+				A[jmax][j] = A[i][j]
+				A[i][j] = temp
+			}
+			d = !d;
+			vv[jmax] = vv[i]
+		}
+		idx[i] = jmax;
+		if (i == n-1) break;
+		var temp = A[i][i]
+		if (temp == 0) A[i][i] = temp = tiny
+		temp = 1 / temp
+		for (var j=i+1; j<n; j++) A[j][i] *= temp
+	}
+
+""", "matrix", "C", 56),
+    (
+"""for (var j=0; j<i; j++) {
+			var sum = A[j][i]
+			for (var k=0; k<j; k++) sum -= A[j][k] * A[k][i];
+			A[j][i] = sum
+		}
+
+""", "matrix", "C", 56),
+    (
+"""for (var j=i; j<n; j++) {
+			var sum = A[j][i]
+			for (var k=0; k<i; k++) sum -= A[j][k] * A[k][i];
+			A[j][i] = sum
+			var temp = vv[j] * Math.abs(sum)
+			if (temp >= max) {
+				max = temp
+				jmax = j
+			}
+		}
+
+""", "matrix", "C", 56),
+    (
+"""if (i <= jmax) {
+			for (var j=0; j<n; j++) {
+				var temp = A[jmax][j]
+				A[jmax][j] = A[i][j]
+				A[i][j] = temp
+			}
+			d = !d;
+			vv[jmax] = vv[i]
+		}
+
+""", "matrix", "C", 56),
+    (
+"""for (var j=0; j<n; j++) {
+				var temp = A[jmax][j]
+				A[jmax][j] = A[i][j]
+				A[i][j] = temp
+			}
+
+""", "matrix", "C", 56),
+    (
+"""Lower Upper Back Substitution
+function lubksb(lu, b, update) {
+	// solves the set of n linear equations A*x = b.
+	// lu is the object containing A, idx and d as determined by the routine ludcmp.
+	var A = lu.A
+	var idx = lu.idx
+	var n = idx.length
+	
+	if (!update) { // make a copy of b
+		var bcpy = new Array(n) 
+		for (var i=0; i<b.length; i+=1) bcpy[i] = b[i]
+		b = bcpy
+	}
+	
+	for (var ii=-1, i=0; i<n; i++) {
+		var ix = idx[i]
+		var sum = b[ix]
+		b[ix] = b[i]
+		if (ii > -1)
+			for (var j=ii; j<i; j++) sum -= A[i][j] * b[j]
+		else if (sum)
+			ii = i
+		b[i] = sum
+	}
+	for (var i=n-1; i>=0; i--) {
+		var sum = b[i]
+		for (var j=i+1; j<n; j++) sum -= A[i][j] * b[j]
+		b[i] = sum / A[i][i]
+	}
+	return b // solution vector x
+}
+
+""", "matrix", "C", 56),
+    (
+"""if (!update) { // make a copy of b
+		var bcpy = new Array(n) 
+		for (var i=0; i<b.length; i+=1) bcpy[i] = b[i]
+		b = bcpy
+	}
+
+""", "matrix", "C", 56),
+    (
+"""for (var ii=-1, i=0; i<n; i++) {
+		var ix = idx[i]
+		var sum = b[ix]
+		b[ix] = b[i]
+		if (ii > -1)
+			for (var j=ii; j<i; j++) sum -= A[i][j] * b[j]
+		else if (sum)
+			ii = i
+		b[i] = sum
+	}
+
+""", "matrix", "C", 56),
+    (
+"""for (var i=n-1; i>=0; i--) {
+		var sum = b[i]
+		for (var j=i+1; j<n; j++) sum -= A[i][j] * b[j]
+		b[i] = sum / A[i][i]
+	}
+
+""", "matrix", "C", 56),
+    (
+"""static double[][] matrixMul(double[][] A, double[][] B) {
+        double[][] result = new double[A.length][B[0].length];
+        double[] aux = new double[B.length];
+
+        for (int j = 0; j < B[0].length; j++) {
+
+            for (int k = 0; k < B.length; k++)
+                aux[k] = B[k][j];
+
+            for (int i = 0; i < A.length; i++)
+                result[i][j] = dotProduct(A[i], aux);
+        }
+        return result;
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for (int j = 0; j < B[0].length; j++) {
+
+            for (int k = 0; k < B.length; k++)
+                aux[k] = B[k][j];
+
+            for (int i = 0; i < A.length; i++)
+                result[i][j] = dotProduct(A[i], aux);
+        }
+
+""", "matrix", "C", 56),
+    (
+"""static double[][] pivotize(double[][] m) {
+        int n = m.length;
+        double[][] id = range(0, n).mapToObj(j -> range(0, n)
+                .mapToDouble(i -> i == j ? 1 : 0).toArray())
+                .toArray(double[][]::new);
+
+        for (int i = 0; i < n; i++) {
+            double maxm = m[i][i];
+            int row = i;
+            for (int j = i; j < n; j++)
+                if (m[j][i] > maxm) {
+                    maxm = m[j][i];
+                    row = j;
+                }
+
+            if (i != row) {
+                double[] tmp = id[i];
+                id[i] = id[row];
+                id[row] = tmp;
+            }
+        }
+        return id;
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = 0; i < n; i++) {
+            double maxm = m[i][i];
+            int row = i;
+            for (int j = i; j < n; j++)
+                if (m[j][i] > maxm) {
+                    maxm = m[j][i];
+                    row = j;
+                }
+
+            if (i != row) {
+                double[] tmp = id[i];
+                id[i] = id[row];
+                id[row] = tmp;
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""if (i != row) {
+                double[] tmp = id[i];
+                id[i] = id[row];
+                id[row] = tmp;
+            }
+
+""", "matrix", "C", 56),
+    (
+"""static double[][][] lu(double[][] A) {
+        int n = A.length;
+        double[][] L = new double[n][n];
+        double[][] U = new double[n][n];
+        double[][] P = pivotize(A);
+        double[][] A2 = matrixMul(P, A);
+
+        for (int j = 0; j < n; j++) {
+            L[j][j] = 1;
+            for (int i = 0; i < j + 1; i++) {
+                double s1 = 0;
+                for (int k = 0; k < i; k++)
+                    s1 += U[k][j] * L[i][k];
+                U[i][j] = A2[i][j] - s1;
+            }
+            for (int i = j; i < n; i++) {
+                double s2 = 0;
+                for (int k = 0; k < j; k++)
+                    s2 += U[k][j] * L[i][k];
+                L[i][j] = (A2[i][j] - s2) / U[j][j];
+            }
+        }
+        return new double[][][]{L, U, P};
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for (int j = 0; j < n; j++) {
+            L[j][j] = 1;
+            for (int i = 0; i < j + 1; i++) {
+                double s1 = 0;
+                for (int k = 0; k < i; k++)
+                    s1 += U[k][j] * L[i][k];
+                U[i][j] = A2[i][j] - s1;
+            }
+            for (int i = j; i < n; i++) {
+                double s2 = 0;
+                for (int k = 0; k < j; k++)
+                    s2 += U[k][j] * L[i][k];
+                L[i][j] = (A2[i][j] - s2) / U[j][j];
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = 0; i < j + 1; i++) {
+                double s1 = 0;
+                for (int k = 0; k < i; k++)
+                    s1 += U[k][j] * L[i][k];
+                U[i][j] = A2[i][j] - s1;
+            }
+
+""", "matrix", "C", 56),
+    (
+"""for (int i = j; i < n; i++) {
+                double s2 = 0;
+                for (int k = 0; k < j; k++)
+                    s2 += U[k][j] * L[i][k];
+                L[i][j] = (A2[i][j] - s2) / U[j][j];
+            }
+
+""", "matrix", "C", 56),
+    (
+"""static void print(double[][] m) {
+        stream(m).forEach(a -> {
+            stream(a).forEach(n -> System.out.printf(Locale.US, "%5.1f ", n));
+            System.out.println();
+        });
+        System.out.println();
+    }
+
+""", "matrix", "C", 56),
+    (
+"""public static void main(String[] args) {
+        double[][] a = {{1.0, 3, 5}, {2.0, 4, 7}, {1.0, 1, 0}};
+
+        double[][] b = {{11.0, 9, 24, 2}, {1.0, 5, 2, 6}, {3.0, 17, 18, 1},
+        {2.0, 5, 7, 1}};
+
+        for (double[][] m : lu(a))
+            print(m);
+
+        System.out.println();
+
+        for (double[][] m : lu(b))
+            print(m);
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for (let r = 0; r < a.length; ++r) {
+    res[r] = new Array(b[0].length);
+    for (let c = 0; c < b[0].length; ++c) {
+      res[r][c] = 0;
+      for (let i = 0; i < a[0].length; ++i)
+        res[r][c] += a[r][i] * b[i][c];
+    }
+  }
+
+""", "matrix", "C", 56),
+    (
+"""for (let c = 0; c < b[0].length; ++c) {
+      res[r][c] = 0;
+      for (let i = 0; i < a[0].length; ++i)
+        res[r][c] += a[r][i] * b[i][c];
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for(let i=0;i<n;i++){
+        lower.push([]);
+        upper.push([]);
+        for(let j=0;j<n;j++){
+            lower[i].push(0);
+            upper[i].push(0);
+        }
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for (let i = 0; i < n; i++) {
+        for (let k = i; k < n; k++){
+            let sum = 0;
+            for (let j = 0; j < i; j++)
+                sum += (lower[i][j] * upper[j][k]);
+            upper[i][k] = mat[i][k] - sum;
+        }
+        for (let k = i; k < n; k++) {
+            if (i == k)
+                lower[i][i] = 1;
+            else{
+                let sum = 0;
+                for (let j = 0; j < i; j++)
+                    sum += (lower[k][j] * upper[j][i]);
+                lower[k][i] = (mat[k][i] - sum) / upper[i][i];
+            }
+        }
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for (let k = i; k < n; k++){
+            let sum = 0;
+            for (let j = 0; j < i; j++)
+                sum += (lower[i][j] * upper[j][k]);
+            upper[i][k] = mat[i][k] - sum;
+        }
+
+""", "matrix", "C", 56),
+    (
+"""for (let k = i; k < n; k++) {
+            if (i == k)
+                lower[i][i] = 1;
+            else{
+                let sum = 0;
+                for (let j = 0; j < i; j++)
+                    sum += (lower[k][j] * upper[j][i]);
+                lower[k][i] = (mat[k][i] - sum) / upper[i][i];
+            }
+        }
+
+""", "matrix", "C", 56),
+    (
+"""for(let i=0;i<n;i++){
+        id.push([]);
+        for(let j=0;j<n;j++){
+            if(i===j)
+                id[i].push(1);
+            else
+                id[i].push(0);
+        }
+    }
+
+""", "matrix", "C", 56),
+    (
+"""for(let j=0;j<n;j++){
+            if(i===j)
+                id[i].push(1);
+            else
+                id[i].push(0);
+        }
+
+""", "matrix", "C", 56),
+    (
+"""for (let i = 0; i < n; i++) {
+        let maxm = m[i][i];
+        let row = i;
+        for (let j = i; j < n; j++)
+            if (m[j][i] > maxm) {
+                maxm = m[j][i];
+                row = j;
+            }
+        if (i != row) {
+            let tmp = id[i];
+            id[i] = id[row];
+            id[row] = tmp;
+        }
+    }
+
+""", "matrix", "C", 56),
+    (
+"""if (i != row) {
+            let tmp = id[i];
+            id[i] = id[row];
+            id[row] = tmp;
+        }
+
+""", "matrix", "C", 56),
+
+    # combinatorial
+    (
+"""public ZeroOneKnapsackForTourists() {
+        ZeroOneKnapsack zok = new ZeroOneKnapsack(400); // 400 dkg = 400 dag = 4 kg
+
+        // making the list of items that you want to bring
+        zok.add("map", 9, 150);
+        zok.add("compass", 13, 35);
+        zok.add("water", 153, 200);
+        zok.add("sandwich", 50, 160);
+        zok.add("glucose", 15, 60);
+        zok.add("tin", 68, 45);
+        zok.add("banana", 27, 60);
+        zok.add("apple", 39, 40);
+        zok.add("cheese", 23, 30);
+        zok.add("beer", 52, 10);
+        zok.add("suntan cream", 11, 70);
+        zok.add("camera", 32, 30);
+        zok.add("t-shirt", 24, 15);
+        zok.add("trousers", 48, 10);
+        zok.add("umbrella", 73, 40);
+        zok.add("waterproof trousers", 42, 70);
+        zok.add("waterproof overclothes", 43, 75);
+        zok.add("note-case", 22, 80);
+        zok.add("sunglasses", 7, 20);
+        zok.add("towel", 18, 12);
+        zok.add("socks", 4, 50);
+        zok.add("book", 30, 10);
+
+        // calculate the solution:
+        List<Item> itemList = zok.calcSolution();
+
+        // write out the solution in the standard output
+        if (zok.isCalculated()) {
+            NumberFormat nf  = NumberFormat.getInstance();
+
+            System.out.println(
+                "Maximal weight           = " +
+                nf.format(zok.getMaxWeight() / 100.0) + " kg"
+            );
+            System.out.println(
+                "Total weight of solution = " +
+                nf.format(zok.getSolutionWeight() / 100.0) + " kg"
+            );
+            System.out.println(
+                "Total value              = " +
+                zok.getProfit()
+            );
+            System.out.println();
+            System.out.println(
+                "You can carry the following materials " +
+                "in the knapsack:"
+            );
+            for (Item item : itemList) {
+                if (item.getInKnapsack() == 1) {
+                    System.out.format(
+                        "%1$-23s %2$-3s %3$-5s %4$-15s \\n",
+                        item.getName(),
+                        item.getWeight(), "dag  ",
+                        "(value = " + item.getValue() + ")"
+                    );
+                }
+            }
+        } else {
+            System.out.println(
+                "The problem is not solved. " +
+                "Maybe you gave wrong data."
+            );
+        }
+
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""for (Item item : itemList) {
+                if (item.getInKnapsack() == 1) {
+                    System.out.format(
+                        "%1$-23s %2$-3s %3$-5s %4$-15s \\n",
+                        item.getName(),
+                        item.getWeight(), "dag  ",
+                        "(value = " + item.getValue() + ")"
+                    );
+                }
+            }
+
+""", "combinatorial", "C", 58),
+    (
+"""public List<Item> calcSolution() {
+        int n = itemList.size();
+
+        setInitialStateForCalculation();
+        if (n > 0  &&  maxWeight > 0) {
+            List< List<Integer> > c = new ArrayList< List<Integer> >();
+            List<Integer> curr = new ArrayList<Integer>();
+
+            c.add(curr);
+            for (int j = 0; j <= maxWeight; j++)
+                curr.add(0);
+            for (int i = 1; i <= n; i++) {
+                List<Integer> prev = curr;
+                c.add(curr = new ArrayList<Integer>());
+                for (int j = 0; j <= maxWeight; j++) {
+                    if (j > 0) {
+                        int wH = itemList.get(i-1).getWeight();
+                        curr.add(
+                            (wH > j)
+                            ?
+                            prev.get(j)
+                            :
+                            Math.max(
+                                prev.get(j),
+                                itemList.get(i-1).getValue() + prev.get(j-wH)
+                            )
+                        );
+                    } else {
+                        curr.add(0);
+                    }
+                } // for (j...)
+            } // for (i...)
+            profit = curr.get(maxWeight);
+
+            for (int i = n, j = maxWeight; i > 0  &&  j >= 0; i--) {
+                int tempI   = c.get(i).get(j);
+                int tempI_1 = c.get(i-1).get(j);
+                if (
+                    (i == 0  &&  tempI > 0)
+                    ||
+                    (i > 0  &&  tempI != tempI_1)
+                )
+                {
+                    Item iH = itemList.get(i-1);
+                    int  wH = iH.getWeight();
+                    iH.setInKnapsack(1);
+                    j -= wH;
+                    solutionWeight += wH;
+                }
+            } // for()
+            calculated = true;
+        } // if()
+        return itemList;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""if (n > 0  &&  maxWeight > 0) {
+            List< List<Integer> > c = new ArrayList< List<Integer> >();
+            List<Integer> curr = new ArrayList<Integer>();
+
+            c.add(curr);
+            for (int j = 0; j <= maxWeight; j++)
+                curr.add(0);
+            for (int i = 1; i <= n; i++) {
+                List<Integer> prev = curr;
+                c.add(curr = new ArrayList<Integer>());
+                for (int j = 0; j <= maxWeight; j++) {
+                    if (j > 0) {
+                        int wH = itemList.get(i-1).getWeight();
+                        curr.add(
+                            (wH > j)
+                            ?
+                            prev.get(j)
+                            :
+                            Math.max(
+                                prev.get(j),
+                                itemList.get(i-1).getValue() + prev.get(j-wH)
+                            )
+                        );
+                    } else {
+                        curr.add(0);
+                    }
+                } // for (j...)
+            } // for (i...)
+            profit = curr.get(maxWeight);
+
+            for (int i = n, j = maxWeight; i > 0  &&  j >= 0; i--) {
+                int tempI   = c.get(i).get(j);
+                int tempI_1 = c.get(i-1).get(j);
+                if (
+                    (i == 0  &&  tempI > 0)
+                    ||
+                    (i > 0  &&  tempI != tempI_1)
+                )
+                {
+                    Item iH = itemList.get(i-1);
+                    int  wH = iH.getWeight();
+                    iH.setInKnapsack(1);
+                    j -= wH;
+                    solutionWeight += wH;
+                }
+            } // for()
+            calculated = true;
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""for (int i = 1; i <= n; i++) {
+                List<Integer> prev = curr;
+                c.add(curr = new ArrayList<Integer>());
+                for (int j = 0; j <= maxWeight; j++) {
+                    if (j > 0) {
+                        int wH = itemList.get(i-1).getWeight();
+                        curr.add(
+                            (wH > j)
+                            ?
+                            prev.get(j)
+                            :
+                            Math.max(
+                                prev.get(j),
+                                itemList.get(i-1).getValue() + prev.get(j-wH)
+                            )
+                        );
+                    } else {
+                        curr.add(0);
+                    }
+                } // for (j...)
+            }
+
+""", "combinatorial", "C", 58),
+    (
+"""for (int j = 0; j <= maxWeight; j++) {
+                    if (j > 0) {
+                        int wH = itemList.get(i-1).getWeight();
+                        curr.add(
+                            (wH > j)
+                            ?
+                            prev.get(j)
+                            :
+                            Math.max(
+                                prev.get(j),
+                                itemList.get(i-1).getValue() + prev.get(j-wH)
+                            )
+                        );
+                    } else {
+                        curr.add(0);
+                    }
+                }
+
+""", "combinatorial", "C", 58),
+    (
+"""if (j > 0) {
+                        int wH = itemList.get(i-1).getWeight();
+                        curr.add(
+                            (wH > j)
+                            ?
+                            prev.get(j)
+                            :
+                            Math.max(
+                                prev.get(j),
+                                itemList.get(i-1).getValue() + prev.get(j-wH)
+                            )
+                        );
+                    }
+
+""", "combinatorial", "C", 58),
+    (
+"""for (int i = n, j = maxWeight; i > 0  &&  j >= 0; i--) {
+                int tempI   = c.get(i).get(j);
+                int tempI_1 = c.get(i-1).get(j);
+                if (
+                    (i == 0  &&  tempI > 0)
+                    ||
+                    (i > 0  &&  tempI != tempI_1)
+                )
+                {
+                    Item iH = itemList.get(i-1);
+                    int  wH = iH.getWeight();
+                    iH.setInKnapsack(1);
+                    j -= wH;
+                    solutionWeight += wH;
+                }
+            }
+
+""", "combinatorial", "C", 58),
+    (
+"""add an item to the item list
+    public void add(String name, int weight, int value) {
+        if (name.equals(""))
+            name = "" + (itemList.size() + 1);
+        itemList.add(new Item(name, weight, value));
+        setInitialStateForCalculation();
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""remove an item from the item list
+    public void remove(String name) {
+        for (Iterator<Item> it = itemList.iterator(); it.hasNext(); ) {
+            if (name.equals(it.next().getName())) {
+                it.remove();
+            }
+        }
+        setInitialStateForCalculation();
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""remove all items from the item list
+    public void removeAllItems() {
+        itemList.clear();
+        setInitialStateForCalculation();
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public int getProfit() {
+        if (!calculated)
+            calcSolution();
+        return profit;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public void setItemList(List<Item> _itemList) {
+        if (_itemList != null) {
+            itemList = _itemList;
+            for (Item item : _itemList) {
+                item.checkMembers();
+            }
+        }
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""if (_itemList != null) {
+            itemList = _itemList;
+            for (Item item : _itemList) {
+                item.checkMembers();
+            }
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""private void setInKnapsackByAll(int inKnapsack) {
+        for (Item item : itemList)
+            if (inKnapsack > 0)
+                item.setInKnapsack(1);
+            else
+                item.setInKnapsack(0);
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""protected void setInitialStateForCalculation() {
+        setInKnapsackByAll(0);
+        calculated     = false;
+        profit         = 0;
+        solutionWeight = 0;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public Item(Item item) {
+        setName(item.name);
+        setWeight(item.weight);
+        setValue(item.value);
+        setBounding(item.bounding);
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public Item(int _weight, int _value, int _bounding) {
+        setWeight(_weight);
+        setValue(_value);
+        setBounding(_bounding);
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public Item(String _name, int _weight, int _value) {
+        setName(_name);
+        setWeight(_weight);
+        setValue(_value);
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public Item(String _name, int _weight, int _value, int _bounding) {
+        setName(_name);
+        setWeight(_weight);
+        setValue(_value);
+        setBounding(_bounding);
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public void setBounding(int _bounding) {
+        bounding = Math.max(_bounding, 0);
+        if (bounding == 0)
+            inKnapsack = 0;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public void checkMembers() {
+        setWeight(weight);
+        setValue(value);
+        setBounding(bounding);
+        setInKnapsack(inKnapsack);
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""function(i, w) {
+ 
+      i = Math.round(i);
+      w = Math.round(w);
+ 
+ 
+      if (i < 0 || w === 0) {
+        // empty base case
+        return {items: [], totalWeight: 0, totalValue: 0};
+      }
+ 
+      var mm = _memo.get(i,w);
+      if (!_.isUndefined(mm)) {
+        return mm;
+      }
+ 
+      var item = items[i];
+      if (weightfn(item) > w) {
+        //item does not fit, try the next item
+        return _memo.put(i, w, _m(i-1, w));
+      }
+      // this item could fit.
+      // are we better off excluding it?
+      var excluded = _m(i-1, w);
+      // or including it?
+      var included = _m(i-1, w - weightfn(item));
+      if (included.totalValue + Math.floor(valuefn(item)/_k) > excluded.totalValue) {
+        // better off including it
+        // make a copy of the list
+        var i1 = included.items.slice();
+        i1.push(item);
+        return _memo.put(i, w,
+          {items: i1,
+           totalWeight: included.totalWeight + weightfn(item),
+           totalValue: included.totalValue + Math.floor(valuefn(item)/_k)});
+      }
+      //better off excluding it
+      return _memo.put(i,w, excluded);
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""function(maxweight) {
+        var scaled = _m(items.length - 1, maxweight);
+        return {
+          items: scaled.items,
+          totalWeight: scaled.totalWeight,
+          totalValue: scaled.totalValue * _k
+        };
+      }
+
+""", "combinatorial", "C", 58),
+    (
+"""function(maxweight, step) {
+        return _.map(_.range(0, maxweight+1, step), function(weight) {
+          var scaled = _m(items.length - 1, weight);
+          return {
+            items: scaled.items,
+            totalWeight: scaled.totalWeight,
+            totalValue: scaled.totalValue * _k
+          };
+        });
+      }
+
+""", "combinatorial", "C", 58),
+    (
+"""function(weight) {
+          var scaled = _m(items.length - 1, weight);
+          return {
+            items: scaled.items,
+            totalWeight: scaled.totalWeight,
+            totalValue: scaled.totalValue * _k
+          };
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""function(actual, expected, tolerance) {
+  if (expected === 0 && actual === 0) return true;
+  if (expected === 0) {
+    return Math.abs(expected - actual) / actual < tolerance;
+  }
+  return Math.abs(expected - actual) / expected < tolerance;
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""test("one knapsack", function() {
+  var combiner =
+    portviz.knapsack.combiner(allwants,
+      function(x){return x.weight;},
+      function(x){return x.value;});
+  var oneport = combiner.one(400);
+  ok(near(oneport.totalValue, 1030, 0.01), "correct total value");
+  ok(near(oneport.totalValue, 1030, 0.01), "correct total value");
+  equal(oneport.totalWeight, 396, "correct total weight");
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""test("frontier", function() {
+  var combiner =
+    portviz.knapsack.combiner(allwants,
+      function(x){return x.weight;},
+      function(x){return x.value;});
+  var ef = combiner.ef(400, 1);
+  equal(ef.length, 401, "401 because it includes the endpoints");
+  ef = combiner.ef(400, 40);
+  equal(ef.length, 11, "11 because it includes the endpoints");
+  var expectedTotalValue = [
+    0,
+    330,
+    445,
+    590,
+    685,
+    755,
+    810,
+    860,
+    902,
+    960,
+    1030
+  ] ;
+  _.each(ef, function(element, index) {
+    // 15% error!  bleah!
+    ok(near(element.totalValue, expectedTotalValue[index], 0.15),
+      'actual ' + element.totalValue + ' expected ' + expectedTotalValue[index]);
+  });
+  deepEqual(_.pluck(ef, 'totalWeight'), [
+    0,
+    39,
+    74,
+    118,
+    158,
+    200,
+    236,
+    266,
+    316,
+    354,
+    396
+  ]);
+  deepEqual(_.map(ef, function(x){return x.items.length;}), [
+    0,
+    4,
+    6,
+    7,
+    9,
+    10,
+    10,
+    12,
+    14,
+    11,
+    12
+   ]);
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""function(element, index) {
+    // 15% error!  bleah!
+    ok(near(element.totalValue, expectedTotalValue[index], 0.15),
+      'actual ' + element.totalValue + ' expected ' + expectedTotalValue[index]);
+  }
+
+""", "combinatorial", "C", 58),
+    (
+"""150,35,200,160,60,45,60,40,30,10,70,30,15,10,40,70,75,80,20,12,50,10 ]
+
+for (i=0; i<n; i++)
+{ //  L[i]=1+Math.floor(Math.random()*3) 
+  //  C[i]=10+Math.floor(Math.random()*9); 
+  j[i]=0;
+  document.write( (i+1) +" "+ L[i] +" "+ C[i] +"<br>") 
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""for (k=0; k<n; k++)
+{ j[k] = Number(e[h].substr(k,1)); 
+  q[h]=q[h]+j[k]*C[k];
+  d[h]=d[h]+L[k]*j[k];
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""public static int distance(String a, String b) {
+        a = a.toLowerCase();
+        b = b.toLowerCase();
+        // i == 0
+        int [] costs = new int [b.length() + 1];
+        for (int j = 0; j < costs.length; j++)
+            costs[j] = j;
+        for (int i = 1; i <= a.length(); i++) {
+            // j == 0; nw = lev(i - 1, j)
+            costs[0] = i;
+            int nw = i - 1;
+            for (int j = 1; j <= b.length(); j++) {
+                int cj = Math.min(1 + Math.min(costs[j], costs[j - 1]), a.charAt(i - 1) == b.charAt(j - 1) ? nw : nw + 1);
+                nw = costs[j];
+                costs[j] = cj;
+            }
+        }
+        return costs[b.length()];
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public static void main(String [] args) {
+        String [] data = { "kitten", "sitting", "saturday", "sunday", "rosettacode", "raisethysword" };
+        for (int i = 0; i < data.length; i += 2)
+            System.out.println("distance(" + data[i] + ", " + data[i+1] + ") = " + distance(data[i], data[i+1]));
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public static int levenshtein(String s, String t){
+        /* if either string is empty, difference is inserting all chars 
+         * from the other
+         */
+        if(s.length() == 0) return t.length();
+        if(t.length() == 0) return s.length();
+
+        /* if first letters are the same, the difference is whatever is
+         * required to edit the rest of the strings
+         */
+        if(s.charAt(0) == t.charAt(0))
+            return levenshtein(s.substring(1), t.substring(1));
+
+        /* else try:
+         *      changing first letter of s to that of t,
+         *      remove first letter of s, or
+         *      remove first letter of t
+         */
+        int a = levenshtein(s.substring(1), t.substring(1));
+        int b = levenshtein(s, t.substring(1));
+        int c = levenshtein(s.substring(1), t);
+
+        if(a > b) a = b;
+        if(a > c) a = c;
+
+        //any of which is 1 edit plus editing the rest of the strings
+        return a + 1;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public static void main(String[] args) {
+        String s1 = "kitten";
+        String s2 = "sitting";
+        System.out.println("distance between '" + s1 + "' and '"
+                + s2 + "': " + levenshtein(s1, s2));
+        s1 = "rosettacode";
+        s2 = "raisethysword";
+        System.out.println("distance between '" + s1 + "' and '"
+                + s2 + "': " + levenshtein(s1, s2));
+        StringBuilder sb1 = new StringBuilder(s1);
+        StringBuilder sb2 = new StringBuilder(s2);
+        System.out.println("distance between '" + sb1.reverse() + "' and '"
+                + sb2.reverse() + "': "
+                + levenshtein(sb1.reverse().toString(), sb2.reverse().toString()));
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""private static int distance(String a, String b, int max) {
+		if (a == b) return 0;
+		int la = a.length();
+		int lb = b.length();
+		if (max >= 0 && abs(la - lb) > max) return max+1;
+		if (la == 0) return lb;
+		if (lb == 0) return la;
+		if (la < lb) {
+			int tl = la; la = lb; lb = tl;
+			String ts = a;  a = b; b = ts;
+		}
+		
+		int[] cost = new int[lb+1];
+		for (int i=0; i<=lb; i+=1) {
+			cost[i] = i;
+		}
+
+		for (int i=1; i<=la; i+=1) {
+			cost[0] = i;
+			int prv = i-1;
+			int min = prv;
+			for (int j=1; j<=lb; j+=1) {
+				int act = prv + (a.charAt(i-1) == b.charAt(j-1) ? 0 : 1);
+				cost[j] = min(1+(prv=cost[j]), 1+cost[j-1], act);
+				if (prv < min) min = prv;
+			}
+			if (max >= 0 && min > max) return max+1;
+		}
+		if (max >= 0 && cost[lb] > max) return max+1;
+		return cost[lb];	
+	}
+
+""", "combinatorial", "C", 58),
+    (
+"""for (int i=1; i<=la; i+=1) {
+			cost[0] = i;
+			int prv = i-1;
+			int min = prv;
+			for (int j=1; j<=lb; j+=1) {
+				int act = prv + (a.charAt(i-1) == b.charAt(j-1) ? 0 : 1);
+				cost[j] = min(1+(prv=cost[j]), 1+cost[j-1], act);
+				if (prv < min) min = prv;
+			}
+			if (max >= 0 && min > max) return max+1;
+		}
+
+""", "combinatorial", "C", 58),
+    (
+"""for (int j=1; j<=lb; j+=1) {
+				int act = prv + (a.charAt(i-1) == b.charAt(j-1) ? 0 : 1);
+				cost[j] = min(1+(prv=cost[j]), 1+cost[j-1], act);
+				if (prv < min) min = prv;
+			}
+
+""", "combinatorial", "C", 58),
+    (
+"""private static int min(int ... a) {
+		int min = Integer.MAX_VALUE;
+		for (int i: a) if (i<min) min = i;
+		return min;
+	}
+
+""", "combinatorial", "C", 58),
+    (
+"""public static void main(String[] args) {
+		System.out.println(
+			ld("kitten","kitten") + " " + // 0
+			ld("kitten","sitten") + " " + // 1
+			ld("kitten","sittes") + " " + // 2
+			ld("kitten","sityteng") + " " + // 3
+			ld("kitten","sittYing") + " " + // 4
+			ld("rosettacode","raisethysword") + " " + // 8 
+			ld("kitten","kittenaaaaaaaaaaaaaaaaa") + " " + // 17
+			ld("kittenaaaaaaaaaaaaaaaaa","kitten") // 17
+		);
+		System.out.println(
+			ld("kitten","kitten", 3) + " " + // true
+			ld("kitten","sitten", 3) + " " + // true
+			ld("kitten","sittes", 3) + " " + // true
+			ld("kitten","sityteng", 3) + " " + // true
+			ld("kitten","sittYing", 3) + " " + // false
+			ld("rosettacode","raisethysword", 3) + " " + // false 
+			ld("kitten","kittenaaaaaaaaaaaaaaaaa", 3) + " " + // false
+			ld("kittenaaaaaaaaaaaaaaaaa","kitten", 3) // false
+		);
+	}
+
+""", "combinatorial", "C", 58),
+    (
+"""levenshtein(a, b) {
+  var t = [], u, i, j, m = a.length, n = b.length;
+  if (!m) { return n; }
+  if (!n) { return m; }
+  for (j = 0; j <= n; j++) { t[j] = j; }
+  for (i = 1; i <= m; i++) {
+    for (u = [i], j = 1; j <= n; j++) {
+      u[j] = a[i - 1] === b[j - 1] ? t[j - 1] : Math.min(t[j - 1], t[j], u[j - 1]) + 1;
+    } t = u;
+  } return u[n];
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""for (i = 1; i <= m; i++) {
+    for (u = [i], j = 1; j <= n; j++) {
+      u[j] = a[i - 1] === b[j - 1] ? t[j - 1] : Math.min(t[j - 1], t[j], u[j - 1]) + 1;
+    } t = u;
+  }
+
+""", "combinatorial", "C", 58),
+    (
+"""(() => {
+    "use strict";
+
+    // ------------ LEVENSHTEIN EDIT DISTANCE ------------
+
+    // levenshtein :: String -> String -> Int
+    const levenshtein = sa =>
+        // The Levenshtein edit distance
+        // between two given strings.
+        sb => {
+            const cs = [...sa];
+            const go = (ns, c) => {
+                const calc = z => tpl => {
+                    const [c1, x, y] = Array.from(tpl);
+
+                    return Math.min(
+                        1 + y,
+                        1 + z,
+                        x + (
+                            c1 === c
+                                ? 0
+                                : 1
+                        )
+                    );
+                };
+                const [n, ...ns1] = ns;
+
+                return scanl(calc)(1 + n)(
+                    zip3(cs)(ns)(ns1)
+                );
+            };
+
+            return last(
+                [...sb].reduce(
+                    go,
+                    enumFromTo(0)(cs.length)
+                )
+            );
+        };
+
+    // ---------------------- TEST -----------------------
+    const main = () => [
+        ["kitten", "sitting"],
+        ["sitting", "kitten"],
+        ["rosettacode", "raisethysword"],
+        ["raisethysword", "rosettacode"]
+    ].map(uncurry(levenshtein));
+
+
+    // ---------------- GENERIC FUNCTIONS ----------------
+
+    // enumFromTo :: Int -> Int -> [Int]
+    const enumFromTo = m =>
+        n => Array.from({
+            length: 1 + n - m
+        }, (_, i) => m + i);
+
+
+    // last :: [a] -> a
+    const last = xs => {
+        // The last item of a list.
+        const n = xs.length;
+
+        return 0 < n
+            ? xs[n - 1]
+            : null;
+    };
+
+
+    // scanl :: (b -> a -> b) -> b -> [a] -> [b]
+    const scanl = f =>
+        // The series of interim values arising
+        // from a catamorphism. Parallel to foldl.
+        startValue => xs =>
+            xs.reduce(
+                (a, x) => {
+                    const v = f(a[0])(x);
+
+                    return [v, a[1].concat(v)];
+                }, [startValue, [startValue]]
+            )[1];
+
+
+    // uncurry :: (a -> b -> c) -> ((a, b) -> c)
+    const uncurry = f =>
+        // A function over a pair, derived
+        // from a curried function.
+        (...args) => {
+            const
+                [x, y] = Boolean(args.length % 2)
+                    ? args[0]
+                    : args;
+
+            return f(x)(y);
+        };
+
+
+    // zip3 :: [a] -> [b] -> [c] -> [(a, b, c)]
+    const zip3 = xs =>
+        ys => zs => xs.slice(
+            0,
+            Math.min(...[xs, ys, zs].map(x => x.length))
+        )
+        .map((x, i) => [x, ys[i], zs[i]]);
+
+
+    // MAIN ---
+    return JSON.stringify(main());
+})();
+
+""", "combinatorial", "C", 58),
+    (
+"""function levenshtein(a, b) {
+  var t = [], u, i, j, m = a.length, n = b.length;
+  if (!m) { return n; }
+  if (!n) { return m; }
+  for (j = 0; j <= n; j++) { t[j] = j; }
+  for (i = 1; i <= m; i++) {
+    for (u = [i], j = 1; j <= n; j++) {
+      u[j] = a[i - 1] === b[j - 1] ? t[j - 1] : Math.min(t[j - 1], t[j], u[j - 1]) + 1;
+    } t = u;
+  } return u[n];
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""for (i = 1; i <= m; i++) {
+    for (u = [i], j = 1; j <= n; j++) {
+      u[j] = a[i - 1] === b[j - 1] ? t[j - 1] : Math.min(t[j - 1], t[j], u[j - 1]) + 1;
+    } t = u;
+  }
+
+""", "combinatorial", "C", 58),
+    (
+"""public static String bitprint(int u){
+                String s= "";
+                for(int n= 0;u > 0;++n, u>>= 1)
+                        if((u & 1) > 0) s+= n + " ";
+                return s;
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""public static int bitcount(int u){
+                int n;
+                for(n= 0;u > 0;++n, u&= (u - 1));//Turn the last set bit to a 0
+                return n;
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""public static LinkedList<String> comb(int c, int n){
+                LinkedList<String> s= new LinkedList<String>();
+                for(int u= 0;u < 1 << n;u++)
+                        if(bitcount(u) == c) s.push(bitprint(u));
+                Collections.sort(s);
+                return s;
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""private static <T> List<List<T>> createCombinations(List<T> elements, int k) {
+		List<List<T>> combinations = new ArrayList<List<T>>();
+		createCombinations(elements, k, new ArrayList<T>(), combinations, 0);
+		return combinations;
+	}
+
+""", "combinatorial", "C", 58),
+    (
+"""private static <T> void createCombinations(
+			List<T> elements, int k, List<T> accumulator, List<List<T>> combinations, int index) {
+		if ( accumulator.size() == k ) {
+		    combinations.addFirst( new ArrayList<T>(accumulator) );
+		} else if ( k - accumulator.size() <= elements.size() - index ) {
+		    createCombinations(elements, k, accumulator, combinations, index + 1);
+		    accumulator.add(elements.get(index));
+		    createCombinations(elements, k, accumulator, combinations, index + 1);
+		    accumulator.removeLast();
+		}
+	}
+
+""", "combinatorial", "C", 58),
+    (
+"""bitprint(u) {
+  var s="";
+  for (var n=0; u; ++n, u>>=1)
+    if (u&1) s+=n+" ";
+  return s;
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""function comb(c,n) {
+  var s=[];
+  for (var u=0; u<1<<n; u++)
+    if (bitcount(u)==c)
+      s.push(bitprint(u))
+  return s.sort();
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""combinations(arr, k){
+    var i,
+    subI,
+    ret = [],
+    sub,
+    next;
+    for(i = 0; i < arr.length; i++){
+        if(k === 1){
+            ret.push( [ arr[i] ] );
+        }else{
+            sub = combinations(arr.slice(i+1, arr.length), k-1);
+            for(subI = 0; subI < sub.length; subI++ ){
+                next = sub[subI];
+                next.unshift(arr[i]);
+                ret.push( next );
+            }
+        }
+    }
+    return ret;
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""for(i = 0; i < arr.length; i++){
+        if(k === 1){
+            ret.push( [ arr[i] ] );
+        }else{
+            sub = combinations(arr.slice(i+1, arr.length), k-1);
+            for(subI = 0; subI < sub.length; subI++ ){
+                next = sub[subI];
+                next.unshift(arr[i]);
+                ret.push( next );
+            }
+        }
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""for(subI = 0; subI < sub.length; subI++ ){
+                next = sub[subI];
+                next.unshift(arr[i]);
+                ret.push( next );
+            }
+
+""", "combinatorial", "C", 58),
+    (
+"""function comb(n, lst) {
+    if (!n) return [[]];
+    if (!lst.length) return [];
+
+    var x = lst[0],
+        xs = lst.slice(1);
+
+    return comb(n - 1, xs).map(function (t) {
+      return [x].concat(t);
+    }).concat(comb(n, xs));
+  }
+
+""", "combinatorial", "C", 58),
+    (
+"""function range(m, n) {
+    return Array.apply(null, Array(n - m + 1)).map(function (x, i) {
+      return m + i;
+    });
+  }
+
+""", "combinatorial", "C", 58),
+    (
+"""[[a]]
+  function comb(n, lst) {
+    if (!n) return [[]];
+    if (!lst.length) return [];
+
+    var x = lst[0],
+      xs = lst.slice(1);
+
+    return comb(n - 1, xs).map(function (t) {
+      return [x].concat(t);
+    }).concat(comb(n, xs));
+  }
+
+""", "combinatorial", "C", 58),
+    (
+"""f
+  function memoized(fn) {
+    m = {};
+    return function (x) {
+      var args = [].slice.call(arguments),
+        strKey = args.join('-');
+
+      v = m[strKey];
+      if ('u' === (typeof v)[0])
+        m[strKey] = v = fn.apply(null, args);
+      return v;
+    }
+  }
+
+""", "combinatorial", "C", 58),
+    (
+"""return function (x) {
+      var args = [].slice.call(arguments),
+        strKey = args.join('-');
+
+      v = m[strKey];
+      if ('u' === (typeof v)[0])
+        m[strKey] = v = fn.apply(null, args);
+      return v;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""function range(m, n) {
+    return Array.apply(null, Array(n - m + 1)).map(function (x, i) {
+      return m + i;
+    });
+  }
+
+""", "combinatorial", "C", 58),
+    (
+"""(() => {
+    'use strict';
+
+    // ------------------ COMBINATIONS -------------------
+
+    // combinations :: Int -> [a] -> [[a]]
+    const combinations = n =>
+        xs => {
+            const comb = n => xs => {
+                return 1 > n ? [
+                    []
+                ] : 0 === xs.length ? (
+                    []
+                ) : (() => {
+                    const
+                        h = xs[0],
+                        tail = xs.slice(1);
+                    return comb(n - 1)(tail)
+                        .map(cons(h))
+                        .concat(comb(n)(tail));
+                })()
+            };
+            return comb(n)(xs);
+        };
+
+    // ---------------------- TEST -----------------------
+    const main = () =>
+        show(
+            combinations(3)(
+                enumFromTo(0)(4)
+            )
+        );
+
+
+    // ---------------- GENERIC FUNCTIONS ----------------
+
+    // cons :: a -> [a] -> [a]
+    const cons = x =>
+        // A list constructed from the item x,
+        // followed by the existing list xs.
+        xs => [x].concat(xs);
+
+
+    // enumFromTo :: Int -> Int -> [Int]
+    const enumFromTo = m =>
+        n => !isNaN(m) ? (
+            Array.from({
+                length: 1 + n - m
+            }, (_, i) => m + i)
+        ) : enumFromTo_(m)(n);
+
+
+    // show :: a -> String
+    const show = (...x) =>
+        JSON.stringify.apply(
+            null, x.length > 1 ? [x[0], null, x[1]] : x
+        );
+
+    // MAIN ---
+    return main();
+})();
+
+""", "combinatorial", "C", 58),
+    (
+"""(() => {
+    'use strict';
+
+    // ------------------ COMBINATIONS -------------------
+
+    // comb :: Int -> Int -> [[Int]]
+    const comb = m =>
+        n => combinations(m)(
+            enumFromTo(0)(n - 1)
+        );
+
+    // combinations :: Int -> [a] -> [[a]]
+    const combinations = k =>
+        xs => sort(
+            filter(xs => k === xs.length)(
+                subsequences(xs)
+            )
+        );
+
+    // --------------------- TEST ---------------------
+    const main = () =>
+        show(
+            comb(3)(5)
+        );
+
+    // ---------------- GENERIC FUNCTIONS ----------------
+
+    // cons :: a -> [a] -> [a]
+    const cons = x =>
+        // A list constructed from the item x,
+        // followed by the existing list xs.
+        xs => [x].concat(xs);
+
+
+    // enumFromTo :: Int -> Int -> [Int]
+    const enumFromTo = m =>
+        n => !isNaN(m) ? (
+            Array.from({
+                length: 1 + n - m
+            }, (_, i) => m + i)
+        ) : enumFromTo_(m)(n);
+
+
+    // filter :: (a -> Bool) -> [a] -> [a]
+    const filter = p =>
+        // The elements of xs which match
+        // the predicate p.
+        xs => [...xs].filter(p);
+
+
+    // list :: StringOrArrayLike b => b -> [a]
+    const list = xs =>
+        // xs itself, if it is an Array,
+        // or an Array derived from xs.
+        Array.isArray(xs) ? (
+            xs
+        ) : Array.from(xs || []);
+
+
+    // show :: a -> String
+    const show = x =>
+        // JSON stringification of a JS value.
+        JSON.stringify(x)
+
+
+    // sort :: Ord a => [a] -> [a]
+    const sort = xs => list(xs).slice()
+        .sort((a, b) => a < b ? -1 : (a > b ? 1 : 0));
+
+
+    // subsequences :: [a] -> [[a]]
+    // subsequences :: String -> [String]
+    const subsequences = xs => {
+        const
+            // nonEmptySubsequences :: [a] -> [[a]]
+            nonEmptySubsequences = xxs => {
+                if (xxs.length < 1) return [];
+                const [x, xs] = [xxs[0], xxs.slice(1)];
+                const f = (r, ys) => cons(ys)(cons(cons(x)(ys))(r));
+                return cons([x])(nonEmptySubsequences(xs)
+                    .reduceRight(f, []));
+            };
+        return ('string' === typeof xs) ? (
+            cons('')(nonEmptySubsequences(xs.split(''))
+                .map(x => ''.concat.apply('', x)))
+        ) : cons([])(nonEmptySubsequences(xs));
+    };
+
+    // MAIN ---
+    return main();
+})();
+
+""", "combinatorial", "C", 58),
+    (
+"""combinations(k, arr, prefix = []) {
+    if (prefix.length == 0) arr = [...Array(arr).keys()];
+    if (k == 0) return [prefix];
+    return arr.flatMap((v, i) =>
+        combinations(k - 1, arr.slice(i + 1), [...prefix, v])
+    );
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""static Int[][] permut(Int items) {
+        if (items <= 1) {
+            // with one item, there is a single permutation; otherwise there are no permutations
+            return items == 1 ? [[0]] : [];
+        }
+
+        // the "pattern" for all values but the first value in each permutation is
+        // derived from the permutations of the next smaller number of items
+        Int[][] pattern = permut(items - 1);
+
+        // build the list of all permutations for the specified number of items by iterating only
+        // the first digit
+        Int[][] result = new Int[][];
+        for (Int prefix : 0 ..< items) {
+            for (Int[] suffix : pattern) {
+                result.add(new Int[items](i -> i == 0 ? prefix : (prefix + suffix[i-1] + 1) % items));
+            }
+        }
+        return result;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""for (Int prefix : 0 ..< items) {
+            for (Int[] suffix : pattern) {
+                result.add(new Int[items](i -> i == 0 ? prefix : (prefix + suffix[i-1] + 1) % items));
+            }
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""public PermutationGenerator(int n, int firstNum_) {
+        if (n < 1) {
+            throw new IllegalArgumentException("The n must be min. 1");
+        }
+        firstNum = firstNum_;
+        array = new int[n];
+        reset();
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public void reset() {
+        for (int i = 0; i < array.length; i++) {
+            array[i] = i + firstNum;
+        }
+        firstReady = false;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public boolean hasMore() {
+        boolean end = firstReady;
+        for (int i = 1; i < array.length; i++) {
+            end = end && array[i] < array[i-1];
+        }
+        return !end;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public int[] getNext() {
+
+        if (!firstReady) {
+            firstReady = true;
+            return array;
+        }
+
+        int temp;
+        int j = array.length - 2;
+        int k = array.length - 1;
+
+        // Find largest index j with a[j] < a[j+1]
+
+        for (;array[j] > array[j+1]; j--);
+
+        // Find index k such that a[k] is smallest integer
+        // greater than a[j] to the right of a[j]
+
+        for (;array[j] > array[k]; k--);
+
+        // Interchange a[j] and a[k]
+
+        temp = array[k];
+        array[k] = array[j];
+        array[j] = temp;
+
+        // Put tail end of permutation after jth position in increasing order
+
+        int r = array.length - 1;
+        int s = j + 1;
+
+        while (r > s) {
+            temp = array[s];
+            array[s++] = array[r];
+            array[r--] = temp;
+        }
+
+        return array;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""while (r > s) {
+            temp = array[s];
+            array[s++] = array[r];
+            array[r--] = temp;
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""For testing of the PermutationGenerator class
+    public static void main(String[] args) {
+        PermutationGenerator pg = new PermutationGenerator(3, 1);
+
+        while (pg.hasMore()) {
+            int[] temp =  pg.getNext();
+            for (int i = 0; i < temp.length; i++) {
+                System.out.print(temp[i] + " ");
+            }
+            System.out.println();
+        }
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public class Permutations {
+	public static void main(String[] args) {
+		System.out.println(Utils.Permutations(Utils.mRange(1, 3)));
+	}
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""function perm(list, ret)
+{
+    if (list.length == 0) {
+        var row = document.createTextNode(ret.join(' ') + '\\n');
+        d.appendChild(row);
+        return;
+    }
+    for (var i = 0; i < list.length; i++) {
+        var x = list.splice(i, 1);
+        ret.push(x);
+        perm(list, ret);
+        ret.pop();
+        list.splice(i, 0, x);
+    }
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""if (list.length == 0) {
+        var row = document.createTextNode(ret.join(' ') + '\\n');
+        d.appendChild(row);
+        return;
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""for (var i = 0; i < list.length; i++) {
+        var x = list.splice(i, 1);
+        ret.push(x);
+        perm(list, ret);
+        ret.pop();
+        list.splice(i, 0, x);
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""perm(a) {
+    if (a.length < 2) return [a];
+    var c, d, b = [];
+    for (c = 0; c < a.length; c++) {
+        var e = a.splice(c, 1),
+            f = perm(a);
+        for (d = 0; d < f.length; d++) b.push([e].concat(f[d]));
+        a.splice(c, 0, e[0])
+    } return b
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""for (c = 0; c < a.length; c++) {
+        var e = a.splice(c, 1),
+            f = perm(a);
+        for (d = 0; d < f.length; d++) b.push([e].concat(f[d]));
+        a.splice(c, 0, e[0])
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""Aardvarks,eat,ants
+Aardvarks,ants,eat
+eat,Aardvarks,ants
+eat,ants,Aardvarks
+ants,Aardvarks,eat
+ants,eat,Aardvarks
+
+""", "combinatorial", "C", 58),
+    (
+"""function (xs) {
+        return xs.length ? concatMap(function (x) {
+            return concatMap(function (ys) {
+                return [[x].concat(ys)];
+            }, permutations(delete_(x, xs)));
+        }, xs) : [[]];
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""concatMap(function (x) {
+            return concatMap(function (ys) {
+                return [[x].concat(ys)];
+            }, permutations(delete_(x, xs)));
+        }
+
+""", "combinatorial", "C", 58),
+    (
+"""function (x, xs) {
+        return deleteBy(function (a, b) {
+            return a === b;
+        }, x, xs);
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""(() => {
+    'use strict';
+
+    // permutations :: [a] -> [[a]]
+    const permutations = xs => {
+        const go = xs => xs.length ? (
+            concatMap(
+                x => concatMap(
+                    ys => [[x].concat(ys)],
+                    go(delete_(x, xs))), xs
+                )
+        ) : [[]];
+        return go(xs);
+    };
+
+    // GENERIC FUNCTIONS ----------------------------------
+
+    // concatMap :: (a -> [b]) -> [a] -> [b]
+    const concatMap = (f, xs) =>
+        xs.reduce((a, x) => a.concat(f(x)), []);
+
+
+    // delete :: Eq a => a -> [a] -> [a]
+    const delete_ = (x, xs) => {
+        const go = xs => {
+            return 0 < xs.length ? (
+                (x === xs[0]) ? (
+                    xs.slice(1)
+                ) : [xs[0]].concat(go(xs.slice(1)))
+            ) : [];
+        }
+        return go(xs);
+    };
+
+    // TEST
+    return JSON.stringify(
+        permutations(['Aardvarks', 'eat', 'ants'])
+    );
+})();
+
+""", "combinatorial", "C", 58),
+    (
+"""(() => {
+    'use strict';
+
+    // permutations :: [a] -> [[a]]
+    const permutations = xs =>
+        xs.reduceRight(
+            (a, x) => concatMap(
+                xs => enumFromTo(0, xs.length)
+                .map(n => xs.slice(0, n)
+                    .concat(x)
+                    .concat(xs.slice(n))
+                ),
+                a
+            ),
+            [[]]
+        );
+
+    // GENERIC FUNCTIONS ----------------------------------
+
+    // concatMap :: (a -> [b]) -> [a] -> [b]
+    const concatMap = (f, xs) =>
+        xs.reduce((a, x) => a.concat(f(x)), []);
+
+    // ft :: Int -> Int -> [Int]
+    const enumFromTo = (m, n) =>
+        Array.from({
+            length: 1 + n - m
+        }, (_, i) => m + i);
+
+    // showLog :: a -> IO ()
+    const showLog = (...args) =>
+        console.log(
+            args
+            .map(JSON.stringify)
+            .join(' -> ')
+        );
+
+    // TEST -----------------------------------------------
+    showLog(
+        permutations([1, 2, 3])
+    );
+})();
+
+""", "combinatorial", "C", 58),
+    (
+"""function(a) {
+    if (a.length < 2) return [a];
+    var b = [];
+    for (var c = 0; c < a.length; c++) {
+        var e = a.splice(c, 1), f = S_perm(a);
+        for (var d = 0; d < f.length; d++) 
+           b.push( e.concat( f[d]) ); 
+        a.splice(c, 0, e[0])
+    } 
+    return b
+  }
+
+""", "combinatorial", "C", 58),
+    (
+"""for (var c = 0; c < a.length; c++) {
+        var e = a.splice(c, 1), f = S_perm(a);
+        for (var d = 0; d < f.length; d++) 
+           b.push( e.concat( f[d]) ); 
+        a.splice(c, 0, e[0])
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""function() {  // {S.perm 1 2 3}
+    return S_perm( arguments[0].trim()
+                               .split(" ") )
+                               .join(" ")
+                               .replace(/\\s/g,"{br}")
+  }
+
+""", "combinatorial", "C", 58),
+    (
+"""function(word) {
+    if (word.length === 1) return [word]
+    var results = [];
+    for (var i = 0; i < word.length; i++) {
+      var buti = W_perm( word.substring(0, i) + word.substring(i + 1) );
+      for (var j = 0; j < buti.length; j++) 
+        results.push(word[i] + buti[j]);    
+    }
+    return results;
+  }
+
+""", "combinatorial", "C", 58),
+    (
+"""for (var i = 0; i < word.length; i++) {
+      var buti = W_perm( word.substring(0, i) + word.substring(i + 1) );
+      for (var j = 0; j < buti.length; j++) 
+        results.push(word[i] + buti[j]);    
+    }
+
+""", "combinatorial", "C", 58),
+    (
+"""public static String lcs(String a, String b){
+    int aLen = a.length();
+    int bLen = b.length();
+    if(aLen == 0 || bLen == 0){
+        return "";
+    }else if(a.charAt(aLen-1) == b.charAt(bLen-1)){
+        return lcs(a.substring(0,aLen-1),b.substring(0,bLen-1))
+            + a.charAt(aLen-1);
+    }else{
+        String x = lcs(a, b.substring(0,bLen-1));
+        String y = lcs(a.substring(0,aLen-1), b);
+        return (x.length() > y.length()) ? x : y;
+    }
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""public static String lcs(String a, String b) {
+    int[][] lengths = new int[a.length()+1][b.length()+1];
+
+    // row 0 and column 0 are initialized to 0 already
+
+    for (int i = 0; i < a.length(); i++)
+        for (int j = 0; j < b.length(); j++)
+            if (a.charAt(i) == b.charAt(j))
+                lengths[i+1][j+1] = lengths[i][j] + 1;
+            else
+                lengths[i+1][j+1] =
+                    Math.max(lengths[i+1][j], lengths[i][j+1]);
+
+    // read the substring out from the matrix
+    StringBuffer sb = new StringBuffer();
+    for (int x = a.length(), y = b.length();
+         x != 0 && y != 0; ) {
+        if (lengths[x][y] == lengths[x-1][y])
+            x--;
+        else if (lengths[x][y] == lengths[x][y-1])
+            y--;
+        else {
+            assert a.charAt(x-1) == b.charAt(y-1);
+            sb.append(a.charAt(x-1));
+            x--;
+            y--;
+        }
+    }
+
+    return sb.reverse().toString();
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""lcs(a, b) {
+  var aSub = a.substr(0, a.length - 1);
+  var bSub = b.substr(0, b.length - 1);
+  
+  if (a.length === 0 || b.length === 0) {
+    return '';
+  } else if (a.charAt(a.length - 1) === b.charAt(b.length - 1)) {
+    return lcs(aSub, bSub) + a.charAt(a.length - 1);
+  } else {
+    var x = lcs(a, bSub);
+    var y = lcs(aSub, b);
+    return (x.length > y.length) ? x : y;
+  }
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""const longest = (xs, ys) => (xs.length > ys.length) ? xs : ys;
+
+const lcs = (xx, yy) => {
+  if (!xx.length || !yy.length) { return ''; }
+  
+  const [x, ...xs] = xx;
+  const [y, ...ys] = yy;
+
+  return (x === y) ? (x + lcs(xs, ys)) : longest(lcs(xx, ys), lcs(xs, yy));
+};
+
+""", "combinatorial", "C", 58),
+    (
+"""lcs(x,y){
+	var s,i,j,m,n,
+		lcs=[],row=[],c=[],
+		left,diag,latch;
+	//make sure shorter string is the column string
+	if(m<n){s=x;x=y;y=s;}
+	m = x.length;
+	n = y.length;
+	//build the c-table
+	for(j=0;j<n;row[j++]=0);
+	for(i=0;i<m;i++){
+		c[i] = row = row.slice();
+		for(diag=0,j=0;j<n;j++,diag=latch){
+			latch=row[j];
+			if(x[i] == y[j]){row[j] = diag+1;}
+			else{
+				left = row[j-1]||0;
+				if(left>row[j]){row[j] = left;}
+			}
+		}
+	}
+	i--,j--;
+	//row[j] now contains the length of the lcs
+	//recover the lcs from the table
+	while(i>-1&&j>-1){
+		switch(c[i][j]){
+			default: j--;
+				lcs.unshift(x[i]);
+			case (i&&c[i-1][j]): i--;
+				continue;
+			case (j&&c[i][j-1]): j--;
+		}
+	}
+	return lcs.join('');
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""for(i=0;i<m;i++){
+		c[i] = row = row.slice();
+		for(diag=0,j=0;j<n;j++,diag=latch){
+			latch=row[j];
+			if(x[i] == y[j]){row[j] = diag+1;}
+			else{
+				left = row[j-1]||0;
+				if(left>row[j]){row[j] = left;}
+			}
+		}
+	}
+
+""", "combinatorial", "C", 58),
+    (
+"""for(diag=0,j=0;j<n;j++,diag=latch){
+			latch=row[j];
+			if(x[i] == y[j]){row[j] = diag+1;}
+			else{
+				left = row[j-1]||0;
+				if(left>row[j]){row[j] = left;}
+			}
+		}
+
+""", "combinatorial", "C", 58),
+    (
+"""the lcs from the table
+	while(i>-1&&j>-1){
+		switch(c[i][j]){
+			default: j--;
+				lcs.unshift(x[i]);
+			case (i&&c[i-1][j]): i--;
+				continue;
+			case (j&&c[i][j-1]): j--;
+		}
+	}
+
+""", "combinatorial", "C", 58),
+    (
+"""switch(c[i][j]){
+			default: j--;
+				lcs.unshift(x[i]);
+			case (i&&c[i-1][j]): i--;
+				continue;
+			case (j&&c[i][j-1]): j--;
+		}
+
+""", "combinatorial", "C", 58),
+    (
+"""while(i>-1&&j>-1){
+		switch(c[i][j]){
+			default:i--,j--;
+				continue;
+			case (i&&c[i-1][j]):
+				if(t!==i){lcs.unshift(x.substring(i+1,t+1));}
+				t=--i;
+				continue;
+			case (j&&c[i][j-1]): j--;
+				if(t!==i){lcs.unshift(x.substring(i+1,t+1));}
+				t=i;
+		}
+	}
+
+""", "combinatorial", "C", 58),
+    (
+"""switch(c[i][j]){
+			default:i--,j--;
+				continue;
+			case (i&&c[i-1][j]):
+				if(t!==i){lcs.unshift(x.substring(i+1,t+1));}
+				t=--i;
+				continue;
+			case (j&&c[i][j-1]): j--;
+				if(t!==i){lcs.unshift(x.substring(i+1,t+1));}
+				t=i;
+		}
+
+""", "combinatorial", "C", 58),
+    (
+"""lcs_greedy(x,y){
+  var p1, i, idx,
+      symbols = {},
+      r = 0,
+      p = 0,
+      l = 0,
+      m = x.length,
+      n = y.length,
+      s = new Buffer((m < n) ? n : m);
+
+  p1 = popsym(0);
+
+  for (i = 0; i < m; i++) {
+    p = (r === p) ? p1 : popsym(i);
+    p1 = popsym(i + 1);
+    if (p > p1) {
+      i += 1;
+      idx = p1;
+    } else {
+      idx = p;
+    }
+
+    if (idx === n) {
+      p = popsym(i);
+    } else {
+      r = idx;
+      s[l] = x.charCodeAt(i);
+      l += 1;
+    }
+  }
+  return s.toString('utf8', 0, l);
+	
+  function popsym(index) {
+    var s = x[index],
+        pos = symbols[s] + 1;
+
+    pos = y.indexOf(s, ((pos > r) ? pos : r));
+    if (pos === -1) { pos = n; }
+    symbols[s] = pos;
+    return pos;
+  }
+}
+
+""", "combinatorial", "C", 58),
+    (
+"""for (i = 0; i < m; i++) {
+    p = (r === p) ? p1 : popsym(i);
+    p1 = popsym(i + 1);
+    if (p > p1) {
+      i += 1;
+      idx = p1;
+    } else {
+      idx = p;
+    }
+
+    if (idx === n) {
+      p = popsym(i);
+    } else {
+      r = idx;
+      s[l] = x.charCodeAt(i);
+      l += 1;
+    }
+  }
+
+""", "combinatorial", "C", 58),
+    (
+"""function popsym(index) {
+    var s = x[index],
+        pos = symbols[s] + 1;
+
+    pos = y.indexOf(s, ((pos > r) ? pos : r));
+    if (pos === -1) { pos = n; }
+    symbols[s] = pos;
+    return pos;
+  }
+
+""", "combinatorial", "C", 58),
+
+    # nbody
+    (
+"""public Vector3D(double x, double y, double z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+""", "nbody", "C", 56),
+    (
+"""public NBody(String fileName) throws IOException {
+            Path path = Paths.get(fileName);
+            List<String> lines = Files.readAllLines(path);
+
+            String[] gbt = lines.get(0).split(" ");
+            gc = Double.parseDouble(gbt[0]);
+            bodies = Integer.parseInt(gbt[1]);
+            timeSteps = Integer.parseInt(gbt[2]);
+            masses = new double[bodies];
+            positions = new Vector3D[bodies];
+            Arrays.fill(positions, origin);
+            velocities = new Vector3D[bodies];
+            Arrays.fill(velocities, origin);
+            accelerations = new Vector3D[bodies];
+            Arrays.fill(accelerations, origin);
+            for (int i = 0; i < bodies; ++i) {
+                masses[i] = Double.parseDouble(lines.get(i * 3 + 1));
+                positions[i] = decompose(lines.get(i * 3 + 2));
+                velocities[i] = decompose(lines.get(i * 3 + 3));
+            }
+            System.out.printf("Contents of %s\\n", fileName);
+            for (String line : lines) {
+                System.out.println(line);
+            }
+            System.out.println();
+            System.out.print("Body   :      x          y          z    |");
+            System.out.println("     vx         vy         vz");
+        }
+
+""", "nbody", "C", 56),
+    (
+"""for (int i = 0; i < bodies; ++i) {
+                masses[i] = Double.parseDouble(lines.get(i * 3 + 1));
+                positions[i] = decompose(lines.get(i * 3 + 2));
+                velocities[i] = decompose(lines.get(i * 3 + 3));
+            }
+
+""", "nbody", "C", 56),
+    (
+"""private Vector3D decompose(String line) {
+            String[] xyz = line.split(" ");
+            double x = Double.parseDouble(xyz[0]);
+            double y = Double.parseDouble(xyz[1]);
+            double z = Double.parseDouble(xyz[2]);
+            return new Vector3D(x, y, z);
+        }
+
+""", "nbody", "C", 56),
+    (
+"""private void resolveCollisions() {
+            for (int i = 0; i < bodies; ++i) {
+                for (int j = i + 1; j < bodies; ++j) {
+                    if (positions[i].x == positions[j].x
+                        && positions[i].y == positions[j].y
+                        && positions[i].z == positions[j].z) {
+                        Vector3D temp = velocities[i];
+                        velocities[i] = velocities[j];
+                        velocities[j] = temp;
+                    }
+                }
+            }
+        }
+
+""", "nbody", "C", 56),
+    (
+"""for (int i = 0; i < bodies; ++i) {
+                for (int j = i + 1; j < bodies; ++j) {
+                    if (positions[i].x == positions[j].x
+                        && positions[i].y == positions[j].y
+                        && positions[i].z == positions[j].z) {
+                        Vector3D temp = velocities[i];
+                        velocities[i] = velocities[j];
+                        velocities[j] = temp;
+                    }
+                }
+            }
+
+""", "nbody", "C", 56),
+    (
+"""for (int j = i + 1; j < bodies; ++j) {
+                    if (positions[i].x == positions[j].x
+                        && positions[i].y == positions[j].y
+                        && positions[i].z == positions[j].z) {
+                        Vector3D temp = velocities[i];
+                        velocities[i] = velocities[j];
+                        velocities[j] = temp;
+                    }
+                }
+
+""", "nbody", "C", 56),
+    (
+"""if (positions[i].x == positions[j].x
+                        && positions[i].y == positions[j].y
+                        && positions[i].z == positions[j].z) {
+                        Vector3D temp = velocities[i];
+                        velocities[i] = velocities[j];
+                        velocities[j] = temp;
+                    }
+
+""", "nbody", "C", 56),
+    (
+"""private void computeAccelerations() {
+            for (int i = 0; i < bodies; ++i) {
+                accelerations[i] = origin;
+                for (int j = 0; j < bodies; ++j) {
+                    if (i != j) {
+                        double temp = gc * masses[j] / Math.pow((positions[i].minus(positions[j])).mod(), 3);
+                        accelerations[i] = accelerations[i].plus(positions[j].minus(positions[i]).times(temp));
+                    }
+                }
+            }
+        }
+
+""", "nbody", "C", 56),
+    (
+"""for (int i = 0; i < bodies; ++i) {
+                accelerations[i] = origin;
+                for (int j = 0; j < bodies; ++j) {
+                    if (i != j) {
+                        double temp = gc * masses[j] / Math.pow((positions[i].minus(positions[j])).mod(), 3);
+                        accelerations[i] = accelerations[i].plus(positions[j].minus(positions[i]).times(temp));
+                    }
+                }
+            }
+
+""", "nbody", "C", 56),
+    (
+"""for (int j = 0; j < bodies; ++j) {
+                    if (i != j) {
+                        double temp = gc * masses[j] / Math.pow((positions[i].minus(positions[j])).mod(), 3);
+                        accelerations[i] = accelerations[i].plus(positions[j].minus(positions[i]).times(temp));
+                    }
+                }
+
+""", "nbody", "C", 56),
+    (
+"""private void computeVelocities() {
+            for (int i = 0; i < bodies; ++i) {
+                velocities[i] = velocities[i].plus(accelerations[i]);
+            }
+        }
+
+""", "nbody", "C", 56),
+    (
+"""private void computePositions() {
+            for (int i = 0; i < bodies; ++i) {
+                positions[i] = positions[i].plus(velocities[i]).plus(accelerations[i].times(0.5));
+            }
+        }
+
+""", "nbody", "C", 56),
+    (
+"""public void simulate() {
+            computeAccelerations();
+            computePositions();
+            computeVelocities();
+            resolveCollisions();
+        }
+
+""", "nbody", "C", 56),
+    (
+"""public void printResults() {
+            String fmt = "Body %d : % 8.6f  % 8.6f  % 8.6f | % 8.6f  % 8.6f  % 8.6f\\n";
+            for (int i = 0; i < bodies; ++i) {
+                System.out.printf(
+                    fmt,
+                    i + 1,
+                    positions[i].x, positions[i].y, positions[i].z,
+                    velocities[i].x, velocities[i].y, velocities[i].z
+                );
+            }
+        }
+
+""", "nbody", "C", 56),
+    (
+"""for (int i = 0; i < bodies; ++i) {
+                System.out.printf(
+                    fmt,
+                    i + 1,
+                    positions[i].x, positions[i].y, positions[i].z,
+                    velocities[i].x, velocities[i].y, velocities[i].z
+                );
+            }
+
+""", "nbody", "C", 56),
+    (
+"""public static void main(String[] args) throws IOException {
+        String filename = "nbody.txt";
+        NBody nb = new NBody(filename);
+        for (int i = 0; i < nb.timeSteps; ++i) {
+            System.out.printf("\\nCycle %s\\n", i + 1);
+            nb.simulate();
+            nb.printResults();
+        }
+    }
+
+""", "nbody", "C", 56),
+    (
+"""for (int i = 0; i < nb.timeSteps; ++i) {
+            System.out.printf("\\nCycle %s\\n", i + 1);
+            nb.simulate();
+            nb.printResults();
+        }
+
+""", "nbody", "C", 56),
+    (
+"""constructor(x = 0, y = 0, z = 0) {
+    this.x = x;
+    this.y = y;
+    this.z = z;
+  }
+
+""", "nbody", "C", 56),
+    (
+"""constructor(fileName) {
+    const text = fs.readFileSync(fileName, 'utf-8').trim();
+    const lines = text.split(/\\r?\\n/);
+
+    // parse first header line: gc, bodies, timeSteps
+    const [gcStr, bodiesStr, timeStepsStr] = lines[0].split(/\\s+/);
+    this.gc = parseFloat(gcStr);
+    this.bodies = parseInt(bodiesStr, 10);
+    this.timeSteps = parseInt(timeStepsStr, 10);
+
+    // allocate arrays
+    this.masses = new Array(this.bodies);
+    this.positions = new Array(this.bodies);
+    this.velocities = new Array(this.bodies);
+    this.accelerations = new Array(this.bodies);
+
+    // read per‐body data: mass, position, velocity
+    for (let i = 0; i < this.bodies; i++) {
+      this.masses[i] = parseFloat(lines[1 + 3 * i]);
+      this.positions[i] = this._parseVec(lines[2 + 3 * i]);
+      this.velocities[i] = this._parseVec(lines[3 + 3 * i]);
+      this.accelerations[i] = new Vector3D(0, 0, 0);
+    }
+
+    // echo input
+    console.log(`Contents of ${fileName}`);
+    for (const line of lines) {
+      console.log(line);
+    }
+    console.log();
+    console.log(
+      'Body   :      x          y          z    |     vx         vy         vz'
+    );
+  }
+
+""", "nbody", "C", 56),
+    (
+"""mass, position, velocity
+    for (let i = 0; i < this.bodies; i++) {
+      this.masses[i] = parseFloat(lines[1 + 3 * i]);
+      this.positions[i] = this._parseVec(lines[2 + 3 * i]);
+      this.velocities[i] = this._parseVec(lines[3 + 3 * i]);
+      this.accelerations[i] = new Vector3D(0, 0, 0);
+    }
+
+""", "nbody", "C", 56),
+    (
+"""resolveCollisions() {
+    for (let i = 0; i < this.bodies; i++) {
+      for (let j = i + 1; j < this.bodies; j++) {
+        const p1 = this.positions[i], p2 = this.positions[j];
+        if (p1.x === p2.x && p1.y === p2.y && p1.z === p2.z) {
+          // swap velocities
+          [this.velocities[i], this.velocities[j]] = [
+            this.velocities[j],
+            this.velocities[i],
+          ];
+        }
+      }
+    }
+  }
+
+""", "nbody", "C", 56),
+    (
+"""for (let i = 0; i < this.bodies; i++) {
+      for (let j = i + 1; j < this.bodies; j++) {
+        const p1 = this.positions[i], p2 = this.positions[j];
+        if (p1.x === p2.x && p1.y === p2.y && p1.z === p2.z) {
+          // swap velocities
+          [this.velocities[i], this.velocities[j]] = [
+            this.velocities[j],
+            this.velocities[i],
+          ];
+        }
+      }
+    }
+
+""", "nbody", "C", 56),
+    (
+"""for (let j = i + 1; j < this.bodies; j++) {
+        const p1 = this.positions[i], p2 = this.positions[j];
+        if (p1.x === p2.x && p1.y === p2.y && p1.z === p2.z) {
+          // swap velocities
+          [this.velocities[i], this.velocities[j]] = [
+            this.velocities[j],
+            this.velocities[i],
+          ];
+        }
+      }
+
+""", "nbody", "C", 56),
+    (
+"""if (p1.x === p2.x && p1.y === p2.y && p1.z === p2.z) {
+          // swap velocities
+          [this.velocities[i], this.velocities[j]] = [
+            this.velocities[j],
+            this.velocities[i],
+          ];
+        }
+
+""", "nbody", "C", 56),
+    (
+"""computeAccelerations() {
+    for (let i = 0; i < this.bodies; i++) {
+      let acc = new Vector3D(0, 0, 0);
+      for (let j = 0; j < this.bodies; j++) {
+        if (i === j) continue;
+        const diff = this.positions[j].minus(this.positions[i]);
+        const dist3 = Math.pow(diff.mod(), 3);
+        const factor = (this.gc * this.masses[j]) / dist3;
+        acc = acc.plus(diff.times(factor));
+      }
+      this.accelerations[i] = acc;
+    }
+  }
+
+""", "nbody", "C", 56),
+    (
+"""for (let i = 0; i < this.bodies; i++) {
+      let acc = new Vector3D(0, 0, 0);
+      for (let j = 0; j < this.bodies; j++) {
+        if (i === j) continue;
+        const diff = this.positions[j].minus(this.positions[i]);
+        const dist3 = Math.pow(diff.mod(), 3);
+        const factor = (this.gc * this.masses[j]) / dist3;
+        acc = acc.plus(diff.times(factor));
+      }
+      this.accelerations[i] = acc;
+    }
+
+""", "nbody", "C", 56),
+    (
+"""for (let j = 0; j < this.bodies; j++) {
+        if (i === j) continue;
+        const diff = this.positions[j].minus(this.positions[i]);
+        const dist3 = Math.pow(diff.mod(), 3);
+        const factor = (this.gc * this.masses[j]) / dist3;
+        acc = acc.plus(diff.times(factor));
+      }
+
+""", "nbody", "C", 56),
+    (
+"""computeVelocities() {
+    for (let i = 0; i < this.bodies; i++) {
+      this.velocities[i] = this.velocities[i].plus(
+        this.accelerations[i]
+      );
+    }
+  }
+
+""", "nbody", "C", 56),
+    (
+"""for (let i = 0; i < this.bodies; i++) {
+      this.velocities[i] = this.velocities[i].plus(
+        this.accelerations[i]
+      );
+    }
+
+""", "nbody", "C", 56),
+    (
+"""computePositions() {
+    for (let i = 0; i < this.bodies; i++) {
+      // x = x + v + 0.5 * a
+      this.positions[i] = this.positions[i]
+        .plus(this.velocities[i])
+        .plus(this.accelerations[i].times(0.5));
+    }
+  }
+
+""", "nbody", "C", 56),
+    (
+"""for (let i = 0; i < this.bodies; i++) {
+      // x = x + v + 0.5 * a
+      this.positions[i] = this.positions[i]
+        .plus(this.velocities[i])
+        .plus(this.accelerations[i].times(0.5));
+    }
+
+""", "nbody", "C", 56),
+    (
+"""simulate() {
+    this.computeAccelerations();
+    this.computePositions();
+    this.computeVelocities();
+    this.resolveCollisions();
+  }
+
+""", "nbody", "C", 56),
+    (
+"""printResults() {
+    const fmt = (num) => {
+      // similar to "% 8.6f"
+      const s = num.toFixed(6);
+      return (num >= 0 ? ' ' : '') + s.padStart(8, ' ');
+    };
+    for (let i = 0; i < this.bodies; i++) {
+      const p = this.positions[i];
+      const v = this.velocities[i];
+      console.log(
+        `Body ${i + 1} :${fmt(p.x)} ${fmt(p.y)} ${fmt(p.z)} |${fmt(
+          v.x
+        )} ${fmt(v.y)} ${fmt(v.z)}`
+      );
+    }
+  }
+
+""", "nbody", "C", 56),
+    (
+"""for (let i = 0; i < this.bodies; i++) {
+      const p = this.positions[i];
+      const v = this.velocities[i];
+      console.log(
+        `Body ${i + 1} :${fmt(p.x)} ${fmt(p.y)} ${fmt(p.z)} |${fmt(
+          v.x
+        )} ${fmt(v.y)} ${fmt(v.z)}`
+      );
+    }
+
+""", "nbody", "C", 56),
+    (
+"""entry point
+function main() {
+  const fileName = process.argv[2] || 'nbody.txt';
+  let nb;
+  try {
+    nb = new NBody(fileName);
+  } catch (e) {
+    console.error(`Error reading "${fileName}":`, e.message);
+    process.exit(1);
+  }
+
+  for (let cycle = 1; cycle <= nb.timeSteps; cycle++) {
+    console.log(`\\nCycle ${cycle}`);
+    nb.simulate();
+    nb.printResults();
+  }
+}
+
+""", "nbody", "C", 56),
+    (
+"""for (let cycle = 1; cycle <= nb.timeSteps; cycle++) {
+    console.log(`\\nCycle ${cycle}`);
+    nb.simulate();
+    nb.printResults();
+  }
+
+""", "nbody", "C", 56),
+
+    # fasta
+    (
+"""public static void main(String[] args) throws IOException {
+    List<FASTA> fastas = readFile("fastas.txt");
+    for (FASTA fasta : fastas)
+        System.out.println(fasta);
+}
+
+""", "fasta", "C", 55),
+    (
+"""static List<FASTA> readFile(String path) throws IOException {
+    try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
+        List<FASTA> list = new ArrayList<>();
+        StringBuilder lines = null;
+        String newline = System.lineSeparator();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            if (line.startsWith(">")) {
+                if (lines != null)
+                    list.add(parseFASTA(lines.toString()));
+                lines = new StringBuilder();
+                lines.append(line).append(newline);
+            } else {
+                lines.append(line);
+            }
+        }
+        list.add(parseFASTA(lines.toString()));
+        return list;
+    }
+}
+
+""", "fasta", "C", 55),
+    (
+"""static FASTA parseFASTA(String string) {
+    String description;
+    char[] sequence;
+    int indexOf = string.indexOf(System.lineSeparator());
+    description = string.substring(1, indexOf);
+    /* using 'stripLeading' will remove any additional line-separators */
+    sequence = string.substring(indexOf + 1).stripLeading().toCharArray();
+    return new FASTA(description, sequence);
+}
+
+""", "fasta", "C", 55),
+    (
+"""record FASTA(String description, char[] sequence) {
+    @Override
+    public String toString() {
+        return "%s: %s".formatted(description, new String(sequence));
+    }
+}
+
+""", "fasta", "C", 55),
+    (
+"""public static void main(String[] args) throws FileNotFoundException {
+
+        boolean first = true;
+
+        try (Scanner sc = new Scanner(new File("test.fasta"))) {
+            while (sc.hasNextLine()) {
+                String line = sc.nextLine().trim();
+                if (line.charAt(0) == '>') {
+                    if (first)
+                        first = false;
+                    else
+                        System.out.println();
+                    System.out.printf("%s: ", line.substring(1));
+                } else {
+                    System.out.print(line);
+                }
+            }
+        }
+        System.out.println();
+    }
+
+""", "fasta", "C", 55),
+    (
+"""const fs = require("fs");
+const readline = require("readline");
+ 
+const args = process.argv.slice(2);
+if (!args.length) {
+    console.error("must supply file name");
+    process.exit(1);
+}
+ 
+const fname = args[0];
+ 
+const readInterface = readline.createInterface({
+    input: fs.createReadStream(fname),
+    console: false,
+});
+ 
+let sep = "";
+readInterface.on("line", (line) => {
+    if (line.startsWith(">")) {
+        process.stdout.write(sep);
+        sep = "\\n";
+        process.stdout.write(line.substring(1) + ": ");
+    } else {
+        process.stdout.write(line);
+    }
+});
+
+readInterface.on("close", () => process.stdout.write("\\n"));
+
+""", "fasta", "C", 55),
+]
+
+TRAINING_EXAMPLES = TRAINING_EXAMPLES + TARGETED_EXAMPLES

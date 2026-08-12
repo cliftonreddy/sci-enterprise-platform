@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/train_classifier.py)",
+      "Bash(python -c \":*)",
+      "Read(//c/GreenSoftware/Polyglot Test Bed/polyglot_package/native/**)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
