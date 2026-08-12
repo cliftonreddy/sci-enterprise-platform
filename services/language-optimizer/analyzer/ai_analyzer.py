@@ -6,17 +6,19 @@ Calls Claude API to:
 3. Map each to the best language per SLE'17 paper
 4. Generate the rewritten code in the target language
 """
-import os, json, re, requests, logging
+import os, json, re, logging
 from dataclasses import dataclass, field
 from typing import List, Optional
+from analyzer.ai_provider import AIProvider, AnthropicProvider
 from analyzer.code_validator import validate_and_fix, ValidationResult
 from analyzer.rule_engine import RuleEngine, RuleMatch, SLE17_ENERGY
 from analyzer.local_classifier import get_classifier, LocalClassification
 
 log = logging.getLogger(__name__)
 
-ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
-MODEL = "claude-sonnet-4-20250514"
+
+class NoAPIKeyError(Exception):
+    pass
 
 SUPPORTED_LANGUAGES = {
     "python":     {"ext": ".py",   "runner": "graalpy",    "graal_id": "python"},
@@ -177,33 +179,18 @@ class ProgramAnalysis:
 
 
 class AIAnalyzer:
-    def __init__(self, api_key: str):
-        self.api_key = api_key
-        self.headers = {
-            "Content-Type": "application/json",
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "anthropic-dangerous-direct-browser-access": "true",
-        }
+    def __init__(self, provider: AIProvider):
+        self.provider = provider
         self.rule_engine = RuleEngine()
         self.local_classifier = get_classifier()
+        if not self.provider.available:
+            log.info(f"[Analyzer] {self.provider.name}: no credentials — Tier 3 disabled; Tier 1+2 only")
+        else:
+            log.info(f"[Analyzer] Tier 3 provider: {self.provider.name}")
         if self.local_classifier.available:
             log.info("[Analyzer] Tier 2 local classifier: ACTIVE")
         else:
-            log.info("[Analyzer] Tier 2 local classifier: NOT AVAILABLE (Claude fallback only)")
-
-    def _call_api(self, prompt: str, max_tokens: int = 4000) -> str:
-        payload = {
-            "model": MODEL,
-            "max_tokens": max_tokens,
-            "messages": [{"role": "user", "content": prompt}]
-        }
-        r = requests.post(ANTHROPIC_API_URL, headers=self.headers, json=payload, timeout=120)
-        r.raise_for_status()
-        data = r.json()
-        if "error" in data:
-            raise RuntimeError(f"API error: {data['error']['message']}")
-        return data["content"][0]["text"]
+            log.info("[Analyzer] Tier 2 local classifier: NOT AVAILABLE")
 
     def analyze(self, code: str, source_language: str = None) -> ProgramAnalysis:
         """
@@ -215,33 +202,66 @@ class AIAnalyzer:
         if not source_language:
             source_language = self._detect_language_fast(code)
 
-        # ── Step 2: Run rule engine ───────────────────────────────────────────
+        # ── Step 2: Run rule engine (Tier 1) ─────────────────────────────────
         rule_result = self.rule_engine.analyze(code, source_language)
-        log.info(f"Rule engine: {len(rule_result.matched)} matched, "
-                 f"{len(rule_result.unmatched)} unmatched "
-                 f"(coverage: {rule_result.coverage:.0%})")
+        miss_map    = {m.function_name: m for m in rule_result.near_misses}
 
-        # ── Step 2b: Tier 2 — local CodeBERT classifier for unmatched functions ──
+        log.info("=" * 60)
+        log.info(f"[Tier 1 - Rule Engine] {len(rule_result.matched) + len(rule_result.unmatched)} functions found")
+        for rm in rule_result.matched:
+            log.info(f"[Tier 1] ✓ {rm.function_name}(): MATCHED — pattern={rm.pattern_name}, "
+                     f"target={rm.target_lang}, confidence={rm.confidence:.0%}, "
+                     f"signals={rm.matched_signals}")
+        for fn_name in rule_result.unmatched:
+            miss = miss_map.get(fn_name)
+            if miss and miss.reason == "low_confidence":
+                log.info(f"[Tier 1] ✗ {fn_name}(): LOW CONFIDENCE — best pattern='{miss.best_pattern}', "
+                         f"confidence={miss.best_confidence:.0%} < {self.rule_engine.CONFIDENCE_THRESHOLD:.0%} threshold, "
+                         f"signals hit={miss.matched_signals} → passing to Tier 2")
+            else:
+                log.info(f"[Tier 1] ✗ {fn_name}(): NO SIGNALS MATCHED — "
+                         f"no SLE'17 keyword signals found in name/body/params → passing to Tier 2")
+        log.info(f"[Tier 1] Summary: {len(rule_result.matched)} matched, "
+                 f"{len(rule_result.unmatched)} unmatched (coverage {rule_result.coverage:.0%})")
+
+        # ── Step 2b: Tier 2 — local CodeBERT classifier ──────────────────────
         local_matches = {}  # function_name -> LocalClassification
-        if self.local_classifier.available and rule_result.unmatched:
-            log.info(f"[Tier 2] Classifying {len(rule_result.unmatched)} unmatched functions...")
-            for fn_name in rule_result.unmatched:
-                # Extract function body from source code
-                fn_code = self._extract_function(code, fn_name)
-                if fn_code:
+        if rule_result.unmatched:
+            log.info("-" * 60)
+            if not self.local_classifier.available:
+                log.info(f"[Tier 2 - CodeBERT] SKIPPED — classifier not available "
+                         f"→ all {len(rule_result.unmatched)} function(s) sent to Tier 3")
+            else:
+                log.info(f"[Tier 2 - CodeBERT] Classifying {len(rule_result.unmatched)} function(s)...")
+                for fn_name in rule_result.unmatched:
+                    fn_code = self._extract_function(code, fn_name)
+                    if not fn_code:
+                        log.info(f"[Tier 2] ✗ {fn_name}(): could not extract function body → Tier 3 (Claude)")
+                        continue
                     result = self.local_classifier.classify(fn_code)
                     if result:
                         local_matches[fn_name] = result
-                        log.info(f"[Tier 2] {fn_name}: {result.category} → "
-                                 f"{result.target_language} ({result.confidence:.0%})")
+                        log.info(f"[Tier 2] ✓ {fn_name}(): MATCHED — category={result.category}, "
+                                 f"target={result.target_language}, confidence={result.confidence:.0%}")
                     else:
-                        log.info(f"[Tier 2] {fn_name}: low confidence → Claude fallback")
+                        log.info(f"[Tier 2] ✗ {fn_name}(): REJECTED — confidence below 65% threshold → Tier 3 (Claude)")
 
         still_unmatched = [f for f in rule_result.unmatched if f not in local_matches]
-        log.info(f"[Tier 2] Handled {len(local_matches)} functions, "
-                 f"{len(still_unmatched)} sent to Claude")
+        log.info("-" * 60)
+        if still_unmatched:
+            log.info(f"[Tier 3 - Claude] Sending {len(still_unmatched)} function(s) for AI analysis: "
+                     f"{', '.join(still_unmatched)}")
+        else:
+            log.info(f"[Tier 3 - Claude] All functions handled by Tier 1/2 — "
+                     f"Claude used for code generation only")
 
-        # ── Step 3: Claude for full analysis (enriches rule matches + handles unknowns) ──
+        # ── Step 3: AI provider for full analysis (enriches rule matches + handles unknowns) ──
+        if not self.provider.available:
+            log.info(f"[Tier 3 - {self.provider.name}] SKIPPED — no credentials configured")
+            return self._build_no_key_analysis(
+                code, source_language, rule_result, local_matches, still_unmatched
+            )
+
         hint = ""
         if rule_result.matched:
             hint += "\n\nRULE ENGINE PRE-ANALYSIS (high confidence, do not override unless clearly wrong):\n"
@@ -258,7 +278,7 @@ class AIAnalyzer:
                          f"saving={lc.energy_saving}%\n")
 
         prompt = DETECT_AND_ANALYZE_PROMPT.replace("{code}", code) + hint
-        raw_response = self._call_api(prompt, max_tokens=6000)
+        raw_response = self.provider.complete(prompt, max_tokens=6000)
 
         json_match = re.search(r'\{[\s\S]*\}', raw_response)
         if not json_match:
@@ -325,6 +345,65 @@ class AIAnalyzer:
 
         return analysis
 
+    def _build_no_key_analysis(self, code, source_language, rule_result, local_matches, still_unmatched) -> "ProgramAnalysis":
+        """Build a partial ProgramAnalysis from Tier 1+2 only when no API key is present."""
+        functions = []
+
+        for rm in rule_result.matched:
+            functions.append(FunctionAnalysis(
+                name=rm.function_name,
+                start_line=0, end_line=0,
+                category=rm.sle17_category,
+                recommended_language=rm.target_lang,
+                energy_savings_percent=rm.energy_saving,
+                reason=(f"{rm.description} "
+                        f"[Rule engine: {rm.confidence:.0%} confidence, "
+                        f"signals: {', '.join(rm.matched_signals[:3])}]"),
+                is_orchestrator=False, dependencies=[], signature="",
+                rewritten_code="",
+                original_code=self._extract_function(code, rm.function_name) or "",
+            ))
+
+        for fn_name, lc in local_matches.items():
+            functions.append(FunctionAnalysis(
+                name=fn_name,
+                start_line=0, end_line=0,
+                category=lc.category,
+                recommended_language=lc.target_language,
+                energy_savings_percent=lc.energy_saving,
+                reason=(f"SLE'17 category '{lc.category}' detected by "
+                        f"CodeBERT classifier ({lc.confidence:.0%} confidence)"),
+                is_orchestrator=False, dependencies=[], signature="",
+                rewritten_code="",
+                original_code=self._extract_function(code, fn_name) or "",
+            ))
+
+        for fn_name in still_unmatched:
+            functions.append(FunctionAnalysis(
+                name=fn_name,
+                start_line=0, end_line=0,
+                category="unknown",
+                recommended_language="keep",
+                energy_savings_percent=0,
+                reason="No AI subscription — configure an AI provider (see AI_PROVIDER env var) for full analysis",
+                is_orchestrator=False, dependencies=[], signature="",
+                rewritten_code="",
+                original_code=self._extract_function(code, fn_name) or "",
+            ))
+
+        return ProgramAnalysis(
+            source_language=source_language,
+            functions=functions,
+            orchestrator_modifications="",
+            graalvm_imports="",
+            raw={
+                "rule_engine_coverage": rule_result.coverage,
+                "rule_engine_matched":  [m.function_name for m in rule_result.matched],
+                "rule_engine_unmatched": rule_result.unmatched,
+                "no_api_key": True,
+            },
+        )
+
     def _extract_function(self, code: str, fn_name: str) -> Optional[str]:
         """Extract a function's source code by name for local classifier input."""
         import re
@@ -390,7 +469,7 @@ class AIAnalyzer:
                 code=fn.rewritten_code,
                 lang=fn.recommended_language,
                 func_name=fn.name,
-                api_caller=self._call_api
+                api_caller=self.provider.complete,
             )
 
             fn.rewritten_code = result.code
@@ -416,4 +495,4 @@ class AIAnalyzer:
                   .replace("{target_lang}", target_lang)
                   .replace("{function_code}", function_code)
                   .replace("{context_code}", context_code))
-        return self._call_api(prompt, max_tokens=3000)
+        return self.provider.complete(prompt, max_tokens=3000)

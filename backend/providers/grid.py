@@ -14,7 +14,7 @@ from __future__ import annotations
 import time
 import requests as http
 
-from .base import GridIntensityProvider
+from .base import GridIntensityProvider, GridIntensityResult
 
 
 _CACHE_TTL = 900  # 15 min — grid intensity changes slowly
@@ -33,7 +33,7 @@ class ElectricityMapsProvider(GridIntensityProvider):
         em_zone: str | None,
         watttime_region: str | None,
         fallback_gco2: float,
-    ) -> dict:
+    ) -> GridIntensityResult:
         if not em_zone or not self._token:
             return _static(fallback_gco2, em_zone)
 
@@ -109,7 +109,7 @@ class WattTimeProvider(GridIntensityProvider):
         em_zone: str | None,
         watttime_region: str | None,
         fallback_gco2: float,
-    ) -> dict:
+    ) -> GridIntensityResult:
         if not watttime_region:
             return _static(fallback_gco2, em_zone)
 
@@ -154,13 +154,13 @@ class StaticFallbackProvider(GridIntensityProvider):
         em_zone: str | None,
         watttime_region: str | None,
         fallback_gco2: float,
-    ) -> dict:
+    ) -> GridIntensityResult:
         return _static(fallback_gco2, em_zone or watttime_region)
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
-def _static(fallback_gco2: float, region: str | None) -> dict:
+def _static(fallback_gco2: float, region: str | None) -> GridIntensityResult:
     return {
         "intensity_gco2_kwh": fallback_gco2,
         "source":             "static-fallback",

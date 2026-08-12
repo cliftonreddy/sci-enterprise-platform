@@ -914,6 +914,33 @@ def get_recommendations(app_name: str):
         return jsonify({"error": str(e)}), 500
 
 
+LANGUAGE_OPTIMIZER_URL = os.environ.get("LANGUAGE_OPTIMIZER_URL", "http://localhost:8000")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+
+
+@app.route("/api/language-optimize", methods=["POST"])
+def language_optimize():
+    """Proxy to the Language Optimizer service to analyze code for energy efficiency."""
+    try:
+        payload = request.get_json(force=True)
+        if not payload or "code" not in payload or "filename" not in payload:
+            return jsonify({"error": "Missing required fields: code, filename"}), 400
+
+        payload.setdefault("api_key", ANTHROPIC_API_KEY)
+
+        resp = http.post(
+            f"{LANGUAGE_OPTIMIZER_URL}/api/analyze",
+            json=payload,
+            timeout=120,
+        )
+        return Response(resp.content, status=resp.status_code, content_type="application/json")
+    except http.exceptions.ConnectionError:
+        return jsonify({"error": "Language Optimizer service is unavailable"}), 503
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/ado/details")
 def get_ado_details():
     """

@@ -1,5 +1,33 @@
 version: "3.8"
 services:
+  language-optimizer:
+    build:
+      context: ./services/language-optimizer
+      dockerfile: Dockerfile
+    container_name: sci-language-optimizer
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - CODEBERT_DIR=/app/models/codebert
+      - ENABLE_TIER2=${ENABLE_TIER2:-true}
+      - AI_PROVIDER=${AI_PROVIDER:-anthropic}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
+      - OLLAMA_URL=${OLLAMA_URL:-}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3}
+    volumes:
+      - ${CODEBERT_MODEL_DIR:-codebert-models}:/app/models/codebert
+      - ./services/language-optimizer/optimized:/app/optimized
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   backend:
     build:
       context: .
@@ -19,12 +47,16 @@ services:
       - ADO_ORGS=${ADO_ORGS:-}
       - ADO_PAT=${ADO_PAT:-}
       - ADO_PROJECTS=${ADO_PROJECTS:-}
+      - LANGUAGE_OPTIMIZER_URL=http://language-optimizer:8000
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     volumes:
       - ./data:/app/data:ro
       - ${KUBECONFIG_DIR:-./ucp-bundle}:/app/kubeconfig:ro
       - ${GA4_CREDENTIALS_FILE:-./ga4-service-account.json}:/app/ga4-credentials.json:ro
     ports:
       - "5000:5000"
+    depends_on:
+      - language-optimizer
     restart: unless-stopped
 
   frontend:
@@ -35,3 +67,6 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+volumes:
+  codebert-models:

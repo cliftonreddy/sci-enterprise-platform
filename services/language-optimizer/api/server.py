@@ -1,8 +1,14 @@
 """
 api/server.py — FastAPI backend for GraalVM Optimizer
 """
-import os, sys, json, tempfile, shutil, zipfile, subprocess
+import os, sys, json, tempfile, shutil, zipfile, subprocess, logging
 from pathlib import Path
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:%(name)s: %(message)s",
+    stream=sys.stdout,
+)
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -11,6 +17,7 @@ from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from analyzer.ai_analyzer import AIAnalyzer
+from analyzer.ai_provider import AIProvider, AnthropicProvider, OpenAIProvider, OllamaProvider
 from generator.code_generator import PackageGenerator
 
 app = FastAPI(title="GraalVM Auto-Optimizer API", version="1.0.0")
@@ -38,11 +45,21 @@ class GenerateRequest(BaseModel):
     api_key: Optional[str] = None
 
 
-def get_key(req_key: Optional[str]) -> str:
-    key = req_key or os.environ.get("ANTHROPIC_API_KEY", "")
-    if not key.startswith("sk-"):
-        raise HTTPException(400, "Valid Anthropic API key required (starts with sk-)")
-    return key
+def _get_provider(req_key: Optional[str] = None) -> AIProvider:
+    """Select AI provider from AI_PROVIDER env var; default is Anthropic."""
+    backend = os.environ.get("AI_PROVIDER", "anthropic").lower()
+    if backend == "openai":
+        return OpenAIProvider(
+            api_key=os.environ.get("OPENAI_API_KEY", ""),
+            model=os.environ.get("OPENAI_MODEL", "gpt-4o"),
+        )
+    if backend == "ollama":
+        return OllamaProvider(
+            url=os.environ.get("OLLAMA_URL", "http://localhost:11434"),
+            model=os.environ.get("OLLAMA_MODEL", "llama3"),
+        )
+    # default: anthropic — req_key allows per-request override from UI
+    return AnthropicProvider(req_key or os.environ.get("ANTHROPIC_API_KEY", ""))
 
 
 @app.get("/health")
@@ -57,15 +74,18 @@ def health():
 
 @app.get("/config.json")
 def config():
-    key = os.environ.get("ANTHROPIC_API_KEY", "")
-    return {"anthropicApiKey": key}
+    provider = _get_provider()
+    return {
+        "anthropicApiKey": os.environ.get("ANTHROPIC_API_KEY", ""),
+        "aiProvider": os.environ.get("AI_PROVIDER", "anthropic"),
+        "aiProviderAvailable": provider.available,
+    }
 
 
 @app.post("/api/analyze")
 async def analyze(req: AnalyzeRequest):
-    key = get_key(req.api_key)
     try:
-        analyzer = AIAnalyzer(key)
+        analyzer = AIAnalyzer(_get_provider(req.api_key))
         analysis = analyzer.analyze(req.code)
 
         # Validate and fix generated C/C++ code — compile with clang, retry on error
@@ -108,17 +128,19 @@ async def analyze(req: AnalyzeRequest):
                 }
                 for v in analysis.validation_results
             ],
+            "no_api_key": analysis.raw.get("no_api_key", False),
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(500, str(e))
 
 
 @app.post("/api/generate")
 async def generate(req: GenerateRequest):
-    key = get_key(req.api_key)
     tmp = Path(tempfile.mkdtemp())
     try:
-        analyzer = AIAnalyzer(key)
+        analyzer = AIAnalyzer(_get_provider(req.api_key))
         analysis = analyzer.analyze(req.code)
         out_dir = tmp / "optimized"
         gen = PackageGenerator(analysis, req.code, req.filename, str(out_dir))
@@ -153,11 +175,10 @@ async def benchmark(req: BenchmarkRequest):
     TestSuite to prove correctness), then run benchmark.sh twice (Java path and
     native path) and return combined JSON results with energy comparisons.
     """
-    key = get_key(req.api_key)
     tmp = Path(tempfile.mkdtemp())
     try:
         # 1. Analyze and generate package
-        analyzer = AIAnalyzer(key)
+        analyzer = AIAnalyzer(_get_provider(req.api_key))
         analysis = analyzer.analyze(req.code)
         out_dir = tmp / "optimized"
         gen = PackageGenerator(analysis, req.code, req.filename, str(out_dir))
@@ -285,13 +306,12 @@ class GenerateFolderRequest(BaseModel):
 @app.post("/api/generate-folder")
 async def generate_folder(req: GenerateFolderRequest):
     """Analyze all files and produce one unified polyglot package zip."""
-    key = get_key(req.api_key)
     tmp = Path(tempfile.mkdtemp())
     out_dir = tmp / "polyglot_package"
     out_dir.mkdir()
 
     try:
-        analyzer = AIAnalyzer(key)
+        analyzer = AIAnalyzer(_get_provider(req.api_key))
 
         for f in req.files:
             file_path = Path(f.path)

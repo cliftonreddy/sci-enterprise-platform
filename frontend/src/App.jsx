@@ -197,6 +197,12 @@ export default function App() {
   // incremented to invalidate in-flight ADO fetches when mode changes or a different app is selected
   const adoFetchId = useRef(0);
 
+  const [langOptFile, setLangOptFile]       = useState(null);
+  const [langOptLoading, setLangOptLoading] = useState(false);
+  const [langOptResult, setLangOptResult]   = useState(null);
+  const [langOptError, setLangOptError]     = useState(null);
+  const langOptInputRef = useRef(null);
+
   useEffect(() => {
     fetchData(liveMode);
     // If AzureDevOps is already selected, refresh the detail panel to match the new mode
@@ -297,6 +303,28 @@ export default function App() {
     } else {
       adoFetchId.current++; // discard any in-flight ADO fetch when navigating away
       setAdoDetails(null);
+    }
+  };
+
+  const analyzeLanguage = async () => {
+    if (!langOptFile) return;
+    setLangOptLoading(true);
+    setLangOptResult(null);
+    setLangOptError(null);
+    try {
+      const code = await langOptFile.text();
+      const resp = await fetch('/api/language-optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, filename: langOptFile.name }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || data.detail || 'Analysis failed');
+      setLangOptResult(data);
+    } catch (e) {
+      setLangOptError(e.message);
+    } finally {
+      setLangOptLoading(false);
     }
   };
 
@@ -780,7 +808,127 @@ export default function App() {
                 </div>
               </Card>
             )}
-          </>
+          {/* LANGUAGE OPTIMIZATION */}
+          <Card title="Language Optimization" badge="AI-Powered" style={{ marginBottom:20 }}>
+              <div style={{ fontSize:13, color:T.dim, marginBottom:16 }}>
+                Upload a source file to identify energy-intensive functions and get recommendations
+                for more efficient languages based on SLE&apos;17 energy benchmarks.
+              </div>
+
+              <div
+                onClick={() => langOptInputRef.current?.click()}
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) { setLangOptFile(f); setLangOptResult(null); setLangOptError(null); } }}
+                style={{
+                  border: `2px dashed ${langOptFile ? T.blue : T.border}`,
+                  borderRadius: 8, padding: 24, textAlign: 'center',
+                  cursor: 'pointer', marginBottom: 12,
+                  background: langOptFile ? `${T.blue}10` : T.surf2,
+                  transition: 'all .2s',
+                }}
+              >
+                <div style={{ fontSize: 28, marginBottom: 8 }}>
+                  {langOptFile ? '' : ''}
+                </div>
+                <div style={{ fontSize: 13, color: langOptFile ? T.blue : T.dim }}>
+                  {langOptFile ? langOptFile.name : 'Drop a source file here or click to browse (.py, .java, .js, .rb, .r)'}
+                </div>
+                <input
+                  ref={langOptInputRef}
+                  type="file"
+                  accept=".py,.java,.js,.rb,.r,.R"
+                  style={{ display: 'none' }}
+                  onChange={e => { const f = e.target.files[0]; if (f) { setLangOptFile(f); setLangOptResult(null); setLangOptError(null); } }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                <button
+                  className="btn-primary"
+                  disabled={!langOptFile || langOptLoading}
+                  onClick={analyzeLanguage}
+                >
+                  {langOptLoading ? 'Analyzing...' : 'Analyze Energy Efficiency'}
+                </button>
+                {langOptFile && (
+                  <button
+                    className="btn-secondary"
+                    onClick={() => { setLangOptFile(null); setLangOptResult(null); setLangOptError(null); if (langOptInputRef.current) langOptInputRef.current.value = ''; }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {langOptError && (
+                <div style={{ background:`${T.red}20`, border:`1px solid ${T.red}`, borderRadius:6, padding:12, fontSize:13, color:T.red }}>
+                  {langOptError}
+                </div>
+              )}
+
+              {langOptResult && (
+                <div>
+                  {langOptResult.no_api_key && (
+                    <div style={{ background:`${T.amber}18`, border:`1px solid ${T.amber}`, borderRadius:6, padding:12, fontSize:13, color:T.amber, marginBottom:16, display:'flex', alignItems:'center', gap:8 }}>
+                      <span style={{ fontSize:18, flexShrink:0 }}>⚠</span>
+                      <div>
+                        <strong>No AI Subscription</strong> — Tier 1 (rule engine) and Tier 2 (local classifier) results shown.
+                        Functions requiring deeper analysis are marked "keep".
+                        Set <code style={{ fontFamily:'JetBrains Mono,monospace', fontSize:11 }}>AI_PROVIDER</code> + credentials in your <code style={{ fontFamily:'JetBrains Mono,monospace', fontSize:11 }}>.env</code> for full AI-powered recommendations (supports Anthropic, OpenAI, Ollama).
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ display:'flex', gap:12, marginBottom:16 }}>
+                    <div style={{ flex:1, background:T.surf2, border:`1px solid ${T.border}`, borderRadius:6, padding:12 }}>
+                      <div style={{ fontSize:11, color:T.dim, marginBottom:4 }}>Source Language</div>
+                      <div style={{ fontSize:18, fontWeight:700, color:T.blue }}>{langOptResult.source_language || '—'}</div>
+                    </div>
+                    <div style={{ flex:1, background:T.surf2, border:`1px solid ${T.border}`, borderRadius:6, padding:12 }}>
+                      <div style={{ fontSize:11, color:T.dim, marginBottom:4 }}>Functions Analyzed</div>
+                      <div style={{ fontSize:18, fontWeight:700, color:T.text }}>{langOptResult.functions?.length ?? 0}</div>
+                    </div>
+                    <div style={{ flex:1, background:T.surf2, border:`1px solid ${T.border}`, borderRadius:6, padding:12 }}>
+                      <div style={{ fontSize:11, color:T.dim, marginBottom:4 }}>Avg Energy Saving</div>
+                      <div style={{ fontSize:18, fontWeight:700, color:T.green }}>
+                        {langOptResult.functions?.length
+                          ? `${(langOptResult.functions.reduce((s, f) => s + (f.energy_savings_percent || 0), 0) / langOptResult.functions.length).toFixed(0)}%`
+                          : '—'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    {langOptResult.functions?.map((fn, i) => (
+                      <div key={i} style={{ background:T.surf2, border:`1px solid ${T.border}`, borderRadius:6, padding:12 }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                          <div style={{ fontFamily:'JetBrains Mono,monospace', fontSize:13, color:T.text, fontWeight:600 }}>
+                            {fn.name}
+                            <span style={{ fontSize:11, color:T.dim, marginLeft:8 }}>lines {fn.start_line}–{fn.end_line}</span>
+                          </div>
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <span style={{ fontSize:11, color:T.dim }}>{langOptResult.source_language}</span>
+                            <span style={{ color:T.dim }}>→</span>
+                            <Badge color={T.green}>{fn.recommended_language}</Badge>
+                            {fn.energy_savings_percent && (
+                              <Badge color={T.amber}>{fn.energy_savings_percent.toFixed(0)}% saving</Badge>
+                            )}
+                          </div>
+                        </div>
+                        {fn.reason && (
+                          <div style={{ fontSize:12, color:T.dim }}>{fn.reason}</div>
+                        )}
+                        {fn.compile_validated === false && fn.compile_error && (
+                          <div style={{ fontSize:11, color:T.amber, marginTop:4 }}>
+                            Compile note: {fn.compile_error}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+          </Card>
+        </>
         )}
 
         {/* REGIONAL CARBON INTENSITY */}

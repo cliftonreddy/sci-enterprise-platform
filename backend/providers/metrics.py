@@ -16,7 +16,7 @@ import time
 import urllib.parse
 from datetime import datetime, timezone
 
-from .base import MetricsProvider
+from .base import MetricsProvider, MetricsResult
 
 
 class PrometheusProvider(MetricsProvider):
@@ -70,7 +70,7 @@ class PrometheusProvider(MetricsProvider):
     def source_label(self) -> str:
         return "prometheus-live"
 
-    def get_metrics(self, app_name: str) -> dict | None:
+    def get_metrics(self, app_name: str) -> MetricsResult | None:
         if not self._kubeconfig or app_name not in self._pod_patterns:
             return None
 
@@ -180,5 +180,5 @@ class NullMetricsProvider(MetricsProvider):
     def source_label(self) -> str:
         return "static-config"
 
-    def get_metrics(self, app_name: str) -> dict | None:
+    def get_metrics(self, app_name: str) -> MetricsResult | None:
         return None

@@ -22,4 +22,21 @@ echo "📡 API:     http://localhost:8000/api"
 echo "📖 Docs:    http://localhost:8000/docs"
 echo ""
 
+# Auto-train CodeBERT classifier on first run if model is missing
+# Set ENABLE_TIER2=false to skip training and run Tier 1 + Tier 3 only.
+export CODEBERT_DIR="${CODEBERT_DIR:-/app/models/codebert}"
+CLASSIFIER_PATH="$CODEBERT_DIR/sle17_classifier.pkl"
+ENABLE_TIER2="${ENABLE_TIER2:-true}"
+
+if [ "$ENABLE_TIER2" = "false" ]; then
+    echo "Tier 2 (CodeBERT) disabled via ENABLE_TIER2=false — skipping training."
+elif [ ! -f "$CLASSIFIER_PATH" ]; then
+    echo "CodeBERT classifier not found — training now (first-run only, ~15 min)..."
+    CODEBERT_DIR="$CODEBERT_DIR" TRANSFORMERS_OFFLINE=0 HF_DATASETS_OFFLINE=0 python3 scripts/train_classifier.py
+    echo "Training complete. Subsequent starts will be instant."
+else
+    echo "CodeBERT classifier found — skipping training."
+fi
+echo ""
+
 exec python3 -m uvicorn api.server:app --host 0.0.0.0 --port 8000

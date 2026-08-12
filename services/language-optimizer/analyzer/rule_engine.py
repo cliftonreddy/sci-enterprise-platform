@@ -167,9 +167,10 @@ PATTERNS: List[Pattern] = [
         target_lang="Rust",
         energy_saving=58.0,
         sle17_category="k_nucleotide",
-        description="Hash map frequency counting — SLE'17: k-nucleotide → C saves 58%",
-        signals=["frequency", "count", "histogram", "word_count", "char_count"],
-        confidence=0.82,
+        description="Hash map frequency counting — SLE'17: k-nucleotide → Rust saves 58%",
+        signals=["frequency", "count", "histogram", "word_count", "char_count",
+                 "kmer", "k_mer", "nucleotide", "HashMap", "merge"],
+        confidence=0.90,
     ),
 
     # ── String / regex ────────────────────────────────────────────────────────
@@ -226,8 +227,10 @@ PATTERNS: List[Pattern] = [
         sle17_category="orchestration",
         description="Orchestration/coordination — keep in original language",
         signals=["main", "__init__", "setup", "teardown", "configure", "init",
-                 "start", "stop", "run", "execute", "dispatch", "router", "controller"],
-        confidence=0.92,
+                 "start", "stop", "run", "execute", "dispatch", "router", "controller",
+                 "process", "processData", "pipeline", "workflow", "orchestrat",
+                 "System.out", "println", "print(", "log."],
+        confidence=0.93,
     ),
 ]
 
@@ -252,10 +255,19 @@ class RuleMatch:
     matched_signals: List[str] = field(default_factory=list)
 
 @dataclass
+class RuleMiss:
+    function_name:    str
+    reason:           str   # "no_signals_matched" | "low_confidence"
+    best_pattern:     str = ""
+    best_confidence:  float = 0.0
+    matched_signals:  List[str] = field(default_factory=list)
+
+@dataclass
 class RuleEngineResult:
-    matched:   List[RuleMatch]    # functions the rule engine handled
-    unmatched: List[str]          # function names to send to Claude
-    coverage:  float              # % of functions handled by rules
+    matched:     List[RuleMatch]    # functions the rule engine handled
+    unmatched:   List[str]          # function names to send to Tier 2/3
+    near_misses: List[RuleMiss]     # why each unmatched function was dropped
+    coverage:    float              # % of functions handled by rules
 
 
 # ── Rule Engine ───────────────────────────────────────────────────────────────
@@ -273,9 +285,10 @@ class RuleEngine:
         Parse code, extract functions, match against SLE'17 patterns.
         Returns matched functions and list of unmatched names for Claude.
         """
-        functions = self._extract_functions(code, source_language)
-        matched   = []
-        unmatched = []
+        functions   = self._extract_functions(code, source_language)
+        matched     = []
+        unmatched   = []
+        near_misses = []
 
         for fn_name, fn_body, fn_params in functions:
             match = self._match_function(fn_name, fn_body, fn_params)
@@ -284,6 +297,19 @@ class RuleEngine:
                 matched.append(match)
             else:
                 unmatched.append(fn_name)
+                if match:
+                    near_misses.append(RuleMiss(
+                        function_name=fn_name,
+                        reason="low_confidence",
+                        best_pattern=match.pattern_name,
+                        best_confidence=match.confidence,
+                        matched_signals=match.matched_signals,
+                    ))
+                else:
+                    near_misses.append(RuleMiss(
+                        function_name=fn_name,
+                        reason="no_signals_matched",
+                    ))
 
         total    = len(functions)
         coverage = len(matched) / total if total > 0 else 0.0
@@ -291,6 +317,7 @@ class RuleEngine:
         return RuleEngineResult(
             matched=matched,
             unmatched=unmatched,
+            near_misses=near_misses,
             coverage=coverage,
         )
 
@@ -445,11 +472,18 @@ class RuleEngine:
                 body  = code[start:start+500]
                 results.append((name, body, params))
 
-        # Deduplicate by name
+        # Deduplicate by name and filter language keywords
+        _KEYWORDS = {
+            "for", "while", "if", "else", "switch", "try", "catch", "finally",
+            "new", "return", "throw", "throws", "import", "package", "class",
+            "interface", "enum", "extends", "implements", "do", "break",
+            "continue", "case", "default", "instanceof", "super", "this",
+            "function", "var", "let", "const", "async", "await",
+        }
         seen = set()
         unique = []
         for item in results:
-            if item[0] not in seen:
+            if item[0] not in seen and item[0] not in _KEYWORDS:
                 seen.add(item[0])
                 unique.append(item)
 

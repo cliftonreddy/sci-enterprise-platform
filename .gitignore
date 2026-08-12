@@ -27,6 +27,16 @@ venv/
 # Node / frontend
 frontend/node_modules/
 frontend/dist/
+services/language-optimizer/node_modules/
+services/language-optimizer/ui/node_modules/
+services/language-optimizer/ui/dist/
+services/language-optimizer/ui/build/
+services/language-optimizer/optimized/
+
+# Language optimizer — generated model artefacts and bytecode
+*.pyo
+*.pth
+*.bin
 
 # Docker
 *.log

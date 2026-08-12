@@ -131,9 +131,9 @@ Docker does NOT run `npm install` or `npm run build` (hangs in Docker).
 
 ### Command
 ```powershell
-cd C:\GreenSoftware\AILanguageOptimization\ui
+cd C:\GreenSoftware\sci-enterprise-platform\services\language-optimizer\ui
 npm run build
-cd ..
+cd C:\GreenSoftware\sci-enterprise-platform
 docker compose down
 docker compose up --build
 ```

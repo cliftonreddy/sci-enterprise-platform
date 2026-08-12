@@ -126,7 +126,7 @@ class LocalClassifier:
             category   = self._clf.classes_[best_idx]
 
             if confidence < confidence_threshold:
-                log.debug(f"[LocalClassifier] Low confidence {confidence:.0%} -> Claude")
+                log.info(f"[LocalClassifier] {category} confidence {confidence:.0%} < threshold {confidence_threshold:.0%} → below cutoff")
                 return None
 
             target = CATEGORY_TO_TARGET.get(category, "keep")

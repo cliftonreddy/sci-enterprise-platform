@@ -79,9 +79,6 @@ def _fix_common_rust_issues(code: str) -> str:
         'use std::os::raw::{c_char, c_int};',
         'use std::os::raw::c_char;'
     )
-    # Fix: *freq.entry(word).or_insert(0) += 1 with Cow key
-    # The word from to_string_lossy().to_lowercase() needs .to_string()
-    import re
     # Add #![allow] if not present
     if '#![allow' not in code:
         code = '#![allow(non_snake_case, dead_code, unused_imports)]\n' + code
@@ -168,8 +165,9 @@ def _compile(code: str, ext: str, compiler: str, func_name: str, lang: str):
             f.write(code)
 
         if lang == "Rust":
+            # --crate-type=lib avoids linking step; -o names the bc directly
             cmd = [compiler, "--emit=llvm-bc", "-O",
-                   "--crate-type=cdylib", src, "-o", bc]
+                   "--crate-type=lib", src, "-o", bc]
         else:
             cmd = [compiler, "-O2", "-emit-llvm", "-c", src, "-o", bc,
                    "--target=x86_64-unknown-linux-gnu"]
@@ -183,6 +181,21 @@ def _compile(code: str, ext: str, compiler: str, func_name: str, lang: str):
             return False, "Compilation timed out (>60s)", ""
 
         if result.returncode == 0:
+            # Rustc may place the bc at the exact -o path or alongside the source;
+            # search the temp dir for any .bc file if the expected path is missing.
+            if not os.path.exists(bc):
+                candidates = [
+                    f for f in os.listdir(tmp)
+                    if f.endswith(".bc") or f.endswith(".rmeta")
+                ]
+                bc_found = next(
+                    (os.path.join(tmp, f) for f in candidates if f.endswith(".bc")),
+                    None
+                )
+                if not bc_found:
+                    return False, f"Compiler returned 0 but no .bc found in {tmp}: {candidates}", ""
+                bc = bc_found
+
             bc_out = tempfile.mktemp(suffix=".bc")
             shutil.copy(bc, bc_out)
             return True, "", bc_out
