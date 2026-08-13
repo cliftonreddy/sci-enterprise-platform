@@ -15,9 +15,6 @@ A comprehensive carbon intensity comparison platform for enterprise applications
 ### Language Optimizer — Three-Tier Analysis Results
 ![Language Optimizer](docs/screenshots/language-optimizer-tiers.png)
 
-### Language Optimizer — No AI Subscription Degradation
-![No API Key Banner](docs/screenshots/no-api-key-banner.png)
-
 ---
 
 ## Features

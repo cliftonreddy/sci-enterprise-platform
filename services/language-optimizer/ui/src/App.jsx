@@ -69,34 +69,6 @@ function Section({ number, title, icon, color = "#4a9eff", subtitle, children, d
   );
 }
 
-// ── API Key bar ───────────────────────────────────────────────────────────────
-function ApiKeyBar({ apiKey, setApiKey, keySource }) {
-  return (
-    <div style={{ padding: "10px 24px", background: "#060e1a",
-      borderBottom: "1px solid #0f2040", display: "flex", alignItems: "center", gap: 12 }}>
-      {keySource === "env" ? (
-        <>
-          <div style={{ width: 8, height: 8, borderRadius: "50%",
-            background: "#00ff9d", boxShadow: "0 0 6px #00ff9d", flexShrink: 0 }} />
-          <span style={{ color: "#00ff9d", fontSize: 12, ...mono }}>
-            API key loaded from environment
-          </span>
-        </>
-      ) : (
-        <>
-          <span style={{ color: "#475569", fontSize: 12 }}>🔑 Anthropic API Key</span>
-          <input type="password" placeholder="sk-ant-..." value={apiKey}
-            onChange={e => setApiKey(e.target.value)}
-            style={{ flex: 1, maxWidth: 420, background: "#040d1a",
-              border: "1px solid #1e3a5f", borderRadius: 6,
-              padding: "6px 12px", color: "#a8d8ff", ...mono,
-              fontSize: 12, outline: "none" }} />
-        </>
-      )}
-    </div>
-  );
-}
-
 // ── Drop zone ─────────────────────────────────────────────────────────────────
 function DropZone({ files, onFiles }) {
   const [dragging, setDragging] = useState(false);
@@ -345,61 +317,36 @@ function FileResult({ filePath, result }) {
 }
 
 // ── Section 3: Test Suite ─────────────────────────────────────────────────────
-function TestSuiteSection({ results, fileContents, apiKey }) {
+function TestSuiteSection({ results }) {
   const [running, setRunning] = useState(false);
   const [testResults, setTestResults] = useState(null);
   const [error, setError] = useState("");
 
   const runTests = async () => {
-    if (!apiKey.startsWith("sk-")) { setError("API key required"); return; }
     setRunning(true); setError(""); setTestResults(null);
 
+    const allFunctions = Object.entries(results).flatMap(([path, r]) =>
+      (r.functions || []).filter(f => f.recommended_language !== "keep" && !f.is_orchestrator)
+        .map(f => ({ ...f, file: path, sourceLang: r.source_language }))
+    );
+
+    if (!allFunctions.length) { setError("No native functions found to test"); setRunning(false); return; }
+
     try {
-      // Ask Claude to generate test cases for each analyzed function
-      const allFunctions = Object.entries(results).flatMap(([path, r]) =>
-        (r.functions || []).filter(f => f.recommended_language !== "keep" && !f.is_orchestrator)
-          .map(f => ({ ...f, file: path, sourceLang: r.source_language }))
-      );
-
-      if (!allFunctions.length) { setError("No native functions found to test"); setRunning(false); return; }
-
-      const prompt = `You are testing that native C implementations produce identical results to the original Java/Python implementations.
-
-For each function below, generate 3 test cases with known inputs and expected outputs.
-Respond ONLY with a JSON array, no markdown:
-[{
-  "function_name": "name",
-  "file": "path",
-  "test_cases": [
-    { "description": "basic case", "input_description": "input summary", "expected_output": "output summary", "passed": true }
-  ]
-}]
-
-Functions to test:
-${allFunctions.slice(0, 5).map(f => `- ${f.name}() in ${f.file}: ${f.reason}`).join("\n")}
-
-Mark passed: true for all (we are simulating — the actual C code matches Java semantics by construction).`;
-
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/test", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 2000,
-          messages: [{ role: "user", content: prompt }],
+          functions: allFunctions.slice(0, 5).map(f => ({ name: f.name, file: f.file, reason: f.reason })),
         }),
       });
-      const d = await r.json();
-      if (d.error) throw new Error(d.error.message);
-      const text = d.content.map(i => i.text || "").join("");
-      const match = text.match(/\[[\s\S]*\]/);
-      if (!match) throw new Error("No JSON in response");
-      setTestResults(JSON.parse(match[0]));
+      if (res.status === 503) {
+        setError("AI provider not configured — set AI_PROVIDER and the corresponding API key in .env");
+        setRunning(false); return;
+      }
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.detail || "Test generation failed");
+      setTestResults(d.results);
     } catch (e) {
       setError(e.message);
     }
@@ -618,27 +565,12 @@ function CodeDiffSection({ results, fileContents }) {
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [apiKey, setApiKey] = useState("");
-  const [keySource, setKeySource] = useState("none");
-  const apiKeyRef = useRef("");
   const [files, setFiles] = useState([]);
   const [fileContents, setFileContents] = useState({});
   const [results, setResults] = useState({});
   const [analyzing, setAnalyzing] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [benchmarking, setBenchmarking] = useState(false);
-  const [benchmarkResults, setBenchmarkResults] = useState(null);
   const [progress, setProgress] = useState({ done: 0, total: 0, current: "" });
   const [error, setError] = useState("");
-
-  const handleKeyChange = v => { setApiKey(v); apiKeyRef.current = v; };
-
-  useState(() => {
-    fetch("/config.json").then(r => r.json()).then(cfg => {
-      const k = (cfg.anthropicApiKey || "").trim();
-      if (k.startsWith("sk-")) { handleKeyChange(k); setKeySource("env"); }
-    }).catch(() => {});
-  });
 
   const handleFiles = useCallback(async newFiles => {
     setFiles(newFiles); setResults({}); setError("");
@@ -651,55 +583,7 @@ export default function App() {
     setFileContents(contents);
   }, []);
 
-  const analyzeWithClaude = async (code, filename, key) => {
-    const prompt = `You are an expert in GraalVM polyglot and SLE'17 energy efficiency research.
-Analyze this ${filename} code. Respond ONLY with a JSON object (no markdown, no backticks):
-{
-  "source_language": "python|java|javascript|ruby|r",
-  "functions": [{
-    "name": "function_name",
-    "start_line": 1,
-    "end_line": 10,
-    "category": "binary_trees|sorting|recursion_deep|combinatorial|hash_set|numeric|io|orchestration|trivial",
-    "recommended_language": "C|C++|Rust|JavaScript|keep",
-    "energy_savings_percent": 40,
-    "reason": "one precise sentence citing SLE'17 benchmark category and energy ratio",
-    "is_orchestrator": false,
-    "rewritten_code": "complete compilable implementation in target language with all includes/imports"
-  }],
-  "orchestrator_modifications": "brief description of changes needed to the orchestrating code"
-}
-Rules from SLE'17: sorting→C(52% saving over Java), deep-recursion→C++(40%), tight-loops/numeric→C(56%), combinatorial→C(58%), io/string→keep, orchestration/main→keep.
-Code to analyze:
-\`\`\`
-${code.slice(0, 6000)}
-\`\`\``;
-
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 6000,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    const d = await r.json();
-    if (d.error) throw new Error(d.error.message);
-    const text = d.content.map(i => i.text || "").join("");
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("No JSON in response");
-    return JSON.parse(match[0]);
-  };
-
   const analyzeAll = async () => {
-    const key = apiKeyRef.current;
-    if (!key.startsWith("sk-")) { setError("Valid API key required"); return; }
     if (!files.length) { setError("Drop a folder first"); return; }
     setAnalyzing(true); setError(""); setResults({});
     setProgress({ done: 0, total: files.length, current: "" });
@@ -710,18 +594,13 @@ ${code.slice(0, 6000)}
       const code = fileContents[f.relativePath];
       if (!code) continue;
       try {
-        let result;
-        try {
-          const res = await fetch("/api/analyze", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code, filename: f.name, api_key: key }),
-          });
-          if (!res.ok) throw new Error("backend");
-          result = await res.json();
-        } catch {
-          result = await analyzeWithClaude(code, f.name, key);
-        }
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code, filename: f.name }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.detail || "Analysis failed");
         newResults[f.relativePath] = result;
         setResults({ ...newResults });
       } catch (e) {
@@ -731,50 +610,6 @@ ${code.slice(0, 6000)}
     }
     setProgress({ done: files.length, total: files.length, current: "" });
     setAnalyzing(false);
-  };
-
-  const generatePackage = async () => {
-    const key = apiKeyRef.current;
-    if (!key.startsWith("sk-")) { setError("Valid API key required"); return; }
-    if (!Object.keys(results).length) { setError("Analyze files first"); return; }
-    setGenerating(true); setError("");
-    try {
-      const res = await fetch("/api/generate-folder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          files: Object.entries(fileContents).map(([path, code]) => ({ path, code })),
-          api_key: key,
-        }),
-      });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Generation failed"); }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = "polyglot_package.zip"; a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) { setError(`Download failed: ${e.message}`); }
-    setGenerating(false);
-  };
-
-  const runBenchmark = async () => {
-    const key = apiKeyRef.current;
-    if (!key.startsWith("sk-")) { setError("Valid API key required"); return; }
-    const javaFiles = Object.entries(fileContents).filter(([p]) => p.endsWith(".java"));
-    if (!javaFiles.length) { setError("No Java files found — benchmark requires Java source"); return; }
-    setBenchmarking(true); setBenchmarkResults(null); setError("");
-    try {
-      // Use the first Java file for now
-      const [filename, code] = javaFiles[0];
-      const res = await fetch("/api/benchmark", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, filename: filename.split("/").pop(), api_key: key }),
-      });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.detail || "Benchmark failed"); }
-      const d = await res.json();
-      setBenchmarkResults(d);
-    } catch (e) { setError(`Benchmark failed: ${e.message}`); }
-    setBenchmarking(false);
   };
 
   const allFunctions = Object.values(results).flatMap(r => r.functions || []);
@@ -803,8 +638,6 @@ ${code.slice(0, 6000)}
           </div>
         </div>
       </div>
-
-      <ApiKeyBar apiKey={apiKey} setApiKey={handleKeyChange} keySource={keySource} />
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 20px" }}>
 
@@ -836,28 +669,6 @@ ${code.slice(0, 6000)}
                   ? `🤖 Analyzing ${progress.current} (${progress.done}/${progress.total})...`
                   : `⚡ Analyze All ${files.length} Files`}
               </button>
-              {hasResults && (
-                <button onClick={generatePackage} disabled={generating}
-                  style={{ flex: 1, background: generating
-                    ? "#0a1628" : "linear-gradient(135deg, #7c3aed, #a855f7)",
-                    border: generating ? "1px solid #1e3a5f" : "none",
-                    color: generating ? "#475569" : "white", borderRadius: 10,
-                    padding: "12px 0", fontSize: 14, fontWeight: 700,
-                    cursor: generating ? "not-allowed" : "pointer" }}>
-                  {generating ? "⚙️ Generating..." : "📦 Download Polyglot Package"}
-                </button>
-              )}
-              {hasResults && (
-                <button onClick={runBenchmark} disabled={benchmarking}
-                  style={{ flex: 1, background: benchmarking
-                    ? "#0a1628" : "linear-gradient(135deg, #d97706, #fbbf24)",
-                    border: benchmarking ? "1px solid #1e3a5f" : "none",
-                    color: benchmarking ? "#475569" : "#040d1a", borderRadius: 10,
-                    padding: "12px 0", fontSize: 14, fontWeight: 700,
-                    cursor: benchmarking ? "not-allowed" : "pointer" }}>
-                  {benchmarking ? "⏱ Benchmarking... (may take 2-3 min)" : "📊 Run Energy Benchmark"}
-                </button>
-              )}
             </div>
           )}
           {analyzing && (
@@ -923,7 +734,6 @@ ${code.slice(0, 6000)}
             <TestSuiteSection
               results={results}
               fileContents={fileContents}
-              apiKey={apiKeyRef.current}
             />
           </Section>
         )}
@@ -936,64 +746,6 @@ ${code.slice(0, 6000)}
           </Section>
         )}
 
-        {/* ── Section 5: Benchmark Results ── */}
-        {benchmarkResults && (
-          <Section number="5" title="Energy Benchmark Results" icon="📊" color="#fbbf24"
-            subtitle="Java vs native — measured wall-clock time with SLE'17 energy constants">
-            <div style={{ padding: 16 }}>
-              {benchmarkResults.results && benchmarkResults.results.length > 0 ? (
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid #1e3a5f" }}>
-                      {["Function", "Target", "Java (ms)", "Native (ms)", "Speedup", "Energy Saving"].map(h => (
-                        <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#475569", fontWeight: 600 }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {benchmarkResults.results.map((r, i) => (
-                      <tr key={i} style={{ borderBottom: "1px solid #0f2040" }}>
-                        <td style={{ padding: "10px 12px", color: "#e2e8f0", fontFamily: "monospace" }}>{r.function}</td>
-                        <td style={{ padding: "10px 12px", color: "#00acd7" }}>{r.targetLanguage}</td>
-                        <td style={{ padding: "10px 12px", color: "#94a3b8" }}>{r.javaMeanMs.toFixed(3)}</td>
-                        <td style={{ padding: "10px 12px", color: "#00ff9d" }}>{r.nativeMeanMs.toFixed(3)}</td>
-                        <td style={{ padding: "10px 12px", color: "#fbbf24", fontWeight: 700 }}>{r.speedup.toFixed(2)}×</td>
-                        <td style={{ padding: "10px 12px" }}>
-                          <span style={{ background: "#00ff9d22", color: "#00ff9d",
-                            borderRadius: 6, padding: "2px 8px", fontWeight: 700 }}>
-                            ↓ {r.energySavingPct.toFixed(1)}%
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div style={{ color: "#94a3b8", fontSize: 13, padding: "8px 0" }}>
-                  No functions showed meaningful native speedup on this input size.
-                </div>
-              )}
-              {benchmarkResults.skipped && benchmarkResults.skipped.length > 0 && (
-                <div style={{ marginTop: 14, padding: "10px 14px", background: "#0f2040",
-                  borderRadius: 8, borderLeft: "3px solid #475569" }}>
-                  <div style={{ color: "#64748b", fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
-                    FILTERED — interop-overhead-dominated (native slower than Java, kept in Java)
-                  </div>
-                  {benchmarkResults.skipped.map((s, i) => (
-                    <div key={i} style={{ color: "#475569", fontSize: 11, fontFamily: "monospace" }}>
-                      {s.function}: {s.speedup.toFixed(2)}× ({s.javaMeanMs.toFixed(3)}ms Java vs {s.nativeMeanMs.toFixed(3)}ms native)
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div style={{ marginTop: 12, color: "#475569", fontSize: 11 }}>
-                Energy estimated using SLE'17 Table 1 power constants: C=1.00, Java=2.98.
-                Each function measured over 100 iterations after 5 warmup runs.
-                Functions with &lt;1.2× native speedup are excluded (GraalVM boundary overhead exceeds compute benefit).
-              </div>
-            </div>
-          </Section>
-        )}
 
         {/* Run instructions */}
         {hasResults && (
