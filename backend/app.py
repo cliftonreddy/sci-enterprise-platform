@@ -926,8 +926,6 @@ def language_optimize():
         if not payload or "code" not in payload or "filename" not in payload:
             return jsonify({"error": "Missing required fields: code, filename"}), 400
 
-        payload.setdefault("api_key", ANTHROPIC_API_KEY)
-
         resp = http.post(
             f"{LANGUAGE_OPTIMIZER_URL}/api/analyze",
             json=payload,
