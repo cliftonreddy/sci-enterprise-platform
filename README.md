@@ -4,6 +4,19 @@ A comprehensive carbon intensity comparison platform for enterprise applications
 
 ---
 
+## Screenshots
+
+### SCI Dashboard — Multi-Application Carbon Comparison
+![SCI Dashboard](docs/screenshots/sci-dashboard.png)
+
+### Language Optimizer — Three-Tier Analysis Results
+![Language Optimizer](docs/screenshots/language-optimizer-tiers.png)
+
+### Language Optimizer — No AI Subscription Degradation
+![No API Key Banner](docs/screenshots/no-api-key-banner.png)
+
+---
+
 ## Features
 
 ### SCI Dashboard
