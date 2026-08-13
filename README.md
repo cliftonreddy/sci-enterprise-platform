@@ -1,6 +1,6 @@
 # Enterprise Multi-Application SCI Platform
 
-A comprehensive carbon intensity comparison platform for enterprise applications. Compare SCI scores across 6 applications, get infrastructure optimization recommendations, and automatically identify energy-intensive code functions for GraalVM polyglot rewriting — all backed by the SLE'17 energy paper and the Green Software Foundation Impact Framework.
+A comprehensive carbon intensity comparison platform for enterprise applications. Compare SCI scores across 6 applications, get infrastructure optimization recommendations, and automatically identify energy-intensive code functions for GraalVM polyglot rewriting — all backed by the SLE'17 energy paper and the SCI specification (ISO/IEC 21031).
 
 ---
 
@@ -26,7 +26,7 @@ A comprehensive carbon intensity comparison platform for enterprise applications
 - Real hardware configurations (AWS m5.2xlarge, c5.4xlarge, Azure D4s v3, GCP n2-standard-4, Dell R740)
 - Actual embodied carbon data from Boavizta API and Cloud Carbon Footprint
 - Hourly usage metrics with realistic workload patterns
-- Full Impact Framework SCI pipeline (16 stages)
+- Implements the SCI specification (ISO/IEC 21031) — the same standard the GSF Impact Framework is built on
 
 ### Infrastructure Optimization Engine
 Three types of recommendations:
@@ -408,7 +408,7 @@ uvicorn api.server:app --port 8000
 ## References
 
 - [Pereira et al. (2017) — Energy Efficiency Across Programming Languages](https://dl.acm.org/doi/10.1145/3136014.3136031) — SLE'17, the paper behind all language recommendations
-- [Green Software Foundation — Impact Framework](https://if.greensoftware.foundation/)
+- [Green Software Foundation — SCI Specification](https://greensoftware.foundation/articles/software-carbon-intensity)
 - [ISO/IEC 21031 — SCI Specification](https://www.iso.org/standard/86612.html)
 - [GraalVM Polyglot / Sulong LLVM Runtime](https://www.graalvm.org/latest/reference-manual/llvm/)
 - [Microsoft CodeBERT](https://github.com/microsoft/CodeBERT)
