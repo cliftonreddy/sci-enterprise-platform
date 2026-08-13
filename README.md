@@ -9,6 +9,9 @@ A comprehensive carbon intensity comparison platform for enterprise applications
 ### SCI Dashboard — Multi-Application Carbon Comparison
 ![SCI Dashboard](docs/screenshots/sci-dashboard.png)
 
+### Azure DevOps — Agent Utilization & Build-Hour Heatmap
+![Utilization Heatmap](docs/screenshots/utilization-heatmap.png)
+
 ### Language Optimizer — Three-Tier Analysis Results
 ![Language Optimizer](docs/screenshots/language-optimizer-tiers.png)
 
